@@ -177,7 +177,7 @@
 
       ctx.globalAlpha = this.isMoving ? this.borderOpacityWhenMoving : 1;
       ctx.strokeStyle = this.borderColor;
-      ctx.lineWidth = 1 / this.borderScaleFactor;
+      ctx.lineWidth = 2 / this.borderScaleFactor;
 
       var wh = this._calculateCurrentDimensions(),
           width = wh.x,
@@ -232,10 +232,15 @@
 
       ctx.save();
 
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 2;
 
       ctx.globalAlpha = this.isMoving ? this.borderOpacityWhenMoving : 1;
       ctx.strokeStyle = ctx.fillStyle = this.cornerColor;
+      ctx.strokeStyle = this.borderColor;
+      ctx.shadowColor = 'rgba(0,0,0,0.1)';
+      ctx.shadowBlur = 3;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 2;
 
       // top-left
       this._drawControl('tl', ctx, methodName,
@@ -302,6 +307,7 @@
       var size = this.cornerSize;
       isVML() || this.transparentCorners || ctx.clearRect(left, top, size, size);
       ctx[methodName](left, top, size, size);
+      ctx['strokeRect'](left, top, size, size);
     },
 
     /**
