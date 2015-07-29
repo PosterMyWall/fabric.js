@@ -305,9 +305,68 @@
         return;
       }
       var size = this.cornerSize;
-      isVML() || this.transparentCorners || ctx.clearRect(left, top, size, size);
-      ctx[methodName](left, top, size, size);
-      ctx['strokeRect'](left, top, size, size);
+      
+      /*
+       * The rotation point looks different from other controls. It is a circle
+       * with an arrow inside it.
+       */
+      if(control === 'mtr') {
+        
+        // first draw the circle
+        ctx.beginPath();
+        ctx.arc(left + 11, top + 11, (size/2)+5, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        /*
+         * Save state since the arrow inside the circle will have a thinner lineWidth
+         * and no shadow.
+         */
+        ctx.save();
+        ctx.lineWidth = 1;
+        ctx.shadowColor = "transparent";
+        
+        /*
+         * Since the arrow is sourced from an SVG path, it needs to be translated
+         * a bit to make it appear in the right place. The constants added to the
+         * left and top values below are to center the arrow inside the circle.
+         */
+        ctx.translate(left + 1, top - (2 * this.rotatingPointOffset) + 2);
+        ctx.lineCap = 'butt';
+        ctx.lineJoin = 'miter';
+        ctx.miterLimit = 4;
+        
+        /*
+         * Draw the circular arrow. The original SVG is at https://thenounproject.com/term/rotate/66368/
+         * We're using a modified version that requires minimal translation and
+         * no scaling.
+         */
+        ctx.beginPath();
+        ctx.moveTo(10.5,79);
+        ctx.bezierCurveTo(6.8935664,79,3.5763253,80.838639,1.6541928,83.84594);
+        ctx.lineTo(1.0462049,80.85812);
+        ctx.lineTo(0.30184339,81.010181);
+        ctx.lineTo(1.2116748,85.477108);
+        ctx.lineTo(5.6001688,84.245446);
+        ctx.lineTo(5.395482,83.513735);
+        ctx.lineTo(2.1941205,84.41294);
+        ctx.bezierCurveTo(3.9611567,81.529362,7.0911688,79.759036,10.5,79.759036);
+        ctx.bezierCurveTo(15.871193,79.759036,20.240963999999998,84.128807,20.240963999999998,89.5);
+        ctx.bezierCurveTo(20.240963999999998,94.871193,15.871192999999998,99.240964,10.499999999999998,99.240964);
+        ctx.bezierCurveTo(5.128807299999998,99.240964,0.7590361499999982,94.871193,0.7590361499999982,89.5);
+        ctx.lineTo(0,89.5);
+        ctx.bezierCurveTo(0,95.289675,4.7103253,100,10.5,100);
+        ctx.bezierCurveTo(16.289674,100,21,95.289675,21,89.5);
+        ctx.bezierCurveTo(21,83.710325,16.289674,79,10.5,79);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      else {
+        isVML() || this.transparentCorners || ctx.clearRect(left, top, size, size);
+        ctx[methodName](left, top, size, size);
+        ctx['strokeRect'](left, top, size, size);
+      }
     },
 
     /**
