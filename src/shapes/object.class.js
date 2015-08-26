@@ -387,14 +387,14 @@
      * @type Number
      * @default
      */
-    cornerSize:               12,
+    cornerSize:               22,
 
     /**
      * When true, object's controlling corners are rendered as transparent inside (i.e. stroke instead of fill)
      * @type Boolean
      * @default
      */
-    transparentCorners:       true,
+    transparentCorners:       false,
 
     /**
      * Default cursor value used when hovering over this object on canvas
@@ -408,21 +408,21 @@
      * @type Number
      * @default
      */
-    padding:                  0,
+    padding:                  11,
 
     /**
      * Color of controlling borders of an object (when it's active)
      * @type String
      * @default
      */
-    borderColor:              'rgba(102,153,255,0.75)',
+    borderColor:              'rgba(63,188,231,1)',
 
     /**
      * Color of controlling corners of an object (when it's active)
      * @type String
      * @default
      */
-    cornerColor:              'rgba(102,153,255,0.5)',
+    cornerColor:              'rgba(255,255,255,1)',
 
     /**
      * When true, this object will use center point as the origin of transformation
@@ -527,7 +527,7 @@
      * @type Number
      * @default
      */
-    borderOpacityWhenMoving:  0.4,
+    borderOpacityWhenMoving:  1,
 
     /**
      * Scale factor of object's controlling borders
@@ -660,7 +660,7 @@
      * @type Boolean
      * @default
      */
-    lockUniScaling:           false,
+    lockUniScaling:           true,
 
     /**
      * When `true`, object cannot be flipped by scaling into negative values
@@ -668,7 +668,7 @@
      * @default
      */
 
-    lockScalingFlip:          false,
+    lockScalingFlip:          true,
     /**
      * List of properties to consider when checking if state
      * of an object is changed (fabric.Object#hasStateChanged)
