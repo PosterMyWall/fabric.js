@@ -455,8 +455,13 @@
       this.stateful && target.saveState();
 
       // determine if it's a drag or rotate case
-      if (target._findTargetCorner(this.getPointer(e))) {
+      var c = target._findTargetCorner(this.getPointer(e));
+      if (c) {
         this.onBeforeScaleRotate(target);
+      }
+
+      if(c === 'btn') {
+        target.fire('btn:clicked', {target: target, e: e});
       }
 
       if (target !== this.getActiveGroup() && target !== this.getActiveObject()) {
@@ -708,6 +713,9 @@
       }
       else if (corner === 'mtr' && target.hasRotatingPoint) {
         this.setCursor(this.rotationCursor);
+      }
+      else if (corner === 'btn') {
+        this.setCursor('pointer');
       }
       else {
         this.setCursor(this.defaultCursor);

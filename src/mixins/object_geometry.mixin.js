@@ -351,6 +351,10 @@
         mtr: mtr
       };
 
+      if(this.hasButton) {
+          this.oCoords.btn = new fabric.Point(mt.x - 36, bl.y);
+      }
+
       // set coordinates of the draggable boxes in the corners used to scale/rotate the image
       this._setCornerCoords && this._setCornerCoords();
 

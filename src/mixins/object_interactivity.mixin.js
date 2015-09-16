@@ -87,24 +87,50 @@
       for (var point in coords) {
         x = coords[point].x;
         y = coords[point].y;
-        coords[point].corner = {
-          tl: {
-            x: x - sinHalfOffset,
-            y: y - cosHalfOffset
-          },
-          tr: {
-            x: x + cosHalfOffset,
-            y: y - sinHalfOffset
-          },
-          bl: {
-            x: x - cosHalfOffset,
-            y: y + sinHalfOffset
-          },
-          br: {
-            x: x + sinHalfOffset,
-            y: y + cosHalfOffset
-          }
-        };
+
+        if(point === 'btn') {
+          var btnCornerHypotenuse = Math.sqrt(Math.pow(this.cornerSize, 2) + Math.pow(this.buttonWidth, 2)),
+              btnCosHalfOffset = btnCornerHypotenuse * Math.cos(newTheta),
+              btnSinHalfOffset = btnCornerHypotenuse * Math.sin(newTheta);
+          coords[point].corner = {
+            tl: {
+              x: x + 55 - btnSinHalfOffset,
+              y: y - btnCosHalfOffset
+            },
+            tr: {
+              x: x + 20 + btnCosHalfOffset,
+              y: y - btnSinHalfOffset
+            },
+            bl: {
+              x: x + 55 - btnCosHalfOffset,
+              y: y + btnSinHalfOffset
+            },
+            br: {
+              x: x + 20 + btnSinHalfOffset,
+              y: y + btnCosHalfOffset
+            }
+          };
+        }
+        else {
+          coords[point].corner = {
+            tl: {
+              x: x - sinHalfOffset,
+              y: y - cosHalfOffset
+            },
+            tr: {
+              x: x + cosHalfOffset,
+              y: y - sinHalfOffset
+            },
+            bl: {
+              x: x - cosHalfOffset,
+              y: y + sinHalfOffset
+            },
+            br: {
+              x: x + sinHalfOffset,
+              y: y + cosHalfOffset
+            }
+          };
+        }
       }
     },
 
@@ -242,6 +268,12 @@
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 2;
 
+      if(this.hasButton) {
+        this._drawControl('btn', ctx, methodName,
+            left + width/2,
+            top + height);
+      }
+
       // top-left
       this._drawControl('tl', ctx, methodName,
         left,
@@ -362,6 +394,24 @@
         ctx.stroke();
         ctx.restore();
       }
+      else if(control === 'btn') {
+        // 36px is related to the default width of the button
+        var bLeft = left - 36, bTop = top;
+        // If the object is small enough to result in overlapping of corners and the button, push the button down
+        if((this.width * this.scaleX) < (this.buttonWidth + 2 * this.cornerSize)) {
+          // extra 4px to add some empty space between corners and the button
+          bTop += this.cornerSize + 4;
+        }
+        ctx[methodName](bLeft, bTop, this.buttonWidth, size);
+        ctx['strokeRect'](bLeft, bTop, this.buttonWidth, size);
+
+        ctx.save();
+        ctx.font = '13px sans-serif';
+        ctx.fillStyle = this.borderColor;
+        // 5px padding of text from the left edge. 14px adjustment which depends on the font size and baseline of the text
+        ctx.fillText(this.buttonText, bLeft + 5, bTop + 14);
+        ctx.restore();
+      }
       else {
         isVML() || this.transparentCorners || ctx.clearRect(left, top, size, size);
         ctx[methodName](left, top, size, size);
@@ -430,7 +480,8 @@
           mt: true,
           mr: true,
           mb: true,
-          mtr: true
+          mtr: true,
+          btn: true
         };
       }
       return this._controlsVisibility;

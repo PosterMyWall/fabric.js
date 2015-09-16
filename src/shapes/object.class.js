@@ -425,6 +425,27 @@
     cornerColor:              'rgba(255,255,255,1)',
 
     /**
+     * PosterMyWall property used for showing the replace image button when editing a template.
+     * @type Boolean
+     * @default
+     */
+    hasButton: false,
+
+    /**
+     * PosterMyWall property for the width of the button.
+     * @type Number
+     * @default
+     */
+    buttonWidth: 92,
+
+    /**
+     * PosterMyWall property for the default text of the button.
+     * @type String
+     * @default
+     */
+    buttonText: 'replace image',
+
+    /**
      * When true, this object will use center point as the origin of transformation
      * when being scaled via the controls.
      * <b>Backwards incompatibility note:</b> This property replaces "centerTransform" (Boolean).
