@@ -350,9 +350,15 @@
         // rotating point
         mtr: mtr
       };
-
+        // set coords for replace button at center of the button.
       if(this.hasButton) {
-          this.oCoords.btn = new fabric.Point(mt.x - 36, bl.y);
+          // In case replace button is pushed down due to overlapping of corners,
+          // 50 is added to the currentHeight to ensure that selectable area of replace button is shifted accordingly.
+          if((this.width * this.scaleX) < (this.buttonWidth + 2 * this.cornerSize)) {
+              currentHeight = currentHeight + 50;
+          }
+          this.oCoords.btn = new fabric.Point(coords.x - (sinTh * ((currentHeight)/2)), coords.y + (cosTh * ((currentHeight)/2)));
+
       }
 
       // set coordinates of the draggable boxes in the corners used to scale/rotate the image

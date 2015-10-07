@@ -89,25 +89,38 @@
         y = coords[point].y;
 
         if(point === 'btn') {
-          var btnCornerHypotenuse = Math.sqrt(Math.pow(this.cornerSize, 2) + Math.pow(this.buttonWidth, 2)),
-              btnCosHalfOffset = btnCornerHypotenuse * Math.cos(newTheta),
-              btnSinHalfOffset = btnCornerHypotenuse * Math.sin(newTheta);
+          // bw and bh are replace button dimensions.
+          var bw = this.buttonWidth,
+              bh = this.cornerSize,
+              theta = degreesToRadians(this.angle);
+
+          if (bw < 0) {
+            bw = Math.abs(bw);
+          }
+
+          var sinTh = Math.sin(theta),
+              cosTh = Math.cos(theta),
+              _angle = bw > 0 ? Math.atan(bh / bw) : 0,
+              _hypotenuse = (bw / Math.cos(_angle)) / 2,
+              offsetX = Math.cos(_angle + theta) * _hypotenuse,
+              offsetY = Math.sin(_angle + theta) * _hypotenuse;
+
           coords[point].corner = {
             tl: {
-              x: x + 55 - btnSinHalfOffset,
-              y: y - btnCosHalfOffset
+              x: x - offsetX,
+              y: y - offsetY
             },
             tr: {
-              x: x + 20 + btnCosHalfOffset,
-              y: y - btnSinHalfOffset
+              x: (x - offsetX) + (bw * cosTh),
+              y: (y - offsetY) + (bw * sinTh)
             },
             bl: {
-              x: x + 55 - btnCosHalfOffset,
-              y: y + btnSinHalfOffset
+              x: (x - offsetX) - (bh * sinTh),
+              y: (y - offsetY) + (bh * cosTh)
             },
             br: {
-              x: x + 20 + btnSinHalfOffset,
-              y: y + btnCosHalfOffset
+              x: x + offsetX,
+              y: y + offsetY
             }
           };
         }
