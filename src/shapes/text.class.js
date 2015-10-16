@@ -51,7 +51,8 @@
       stroke: true,
       strokeWidth: true,
       text: true,
-      textAlign: true
+      textAlign: true,
+      letterSpacing: true
     },
 
     /**
@@ -216,6 +217,13 @@
      * @default
      */
     type:                 'text',
+
+    /**
+     * Letter spacing (in pixels)
+     * @type Number
+     * @default
+     */
+    letterSpacing:        0,
 
     /**
      * Font size (in pixels)
@@ -435,6 +443,8 @@
     },
 
     /**
+     * Renders a line of text in a text box, takes care of letter spacing and text alignment.
+     * Changes made to the function are for PosterMyWall.
      * @private
      * @param {String} method Method name ("fillText" or "strokeText")
      * @param {CanvasRenderingContext2D} ctx Context to render on
@@ -445,19 +455,53 @@
     _renderChars: function(method, ctx, chars, left, top) {
       // remove Text word from method var
       var shortM = method.slice(0, -4);
-      if (this[shortM].toLive) {
-        var offsetX = -this.width / 2 + this[shortM].offsetX || 0,
-            offsetY = -this.height / 2 + this[shortM].offsetY || 0;
-        ctx.save();
-        ctx.translate(offsetX, offsetY);
-        left -= offsetX;
-        top -= offsetY;
+        if (this[shortM].toLive) {
+          var offsetX = -this.width / 2 + this[shortM].offsetX || 0,
+              offsetY = -this.height / 2 + this[shortM].offsetY || 0;
+          ctx.save();
+          ctx.translate(offsetX, offsetY);
+          left -= offsetX;
+          top -= offsetY;
+        }
+
+      if(!this.letterSpacing){
+        ctx[method](chars, left, top);
+        this[shortM].toLive && ctx.restore();
+        return;
       }
-      ctx[method](chars, left, top);
+
+      var characters = String.prototype.split.call(chars, ''),
+          index = 0,
+          current,
+          align = 1;
+      // Right alignment with letter spacing.
+      if (this.textAlign === 'right') {
+        characters = characters.reverse();
+        align = -1;
+      }
+      // Center alignment with letter spacing.
+      else if (this.textAlign === 'center') {
+        ctx.textAlign = 'start';
+        var totalWidth = 0;
+        for (var i = 0; i < characters.length; i++) {
+          totalWidth += (ctx.measureText(characters[i]).width + this.letterSpacing);
+        }
+        // subtract letter space from last character of the line
+        totalWidth = totalWidth - this.letterSpacing;
+        left = left - (totalWidth / 2);
+      }
+
+      while (index < (characters.length)) {
+        current = characters[index++];
+        ctx[method](current,left, top);
+        left += (align * (ctx.measureText(current).width + this.letterSpacing));
+      }
       this[shortM].toLive && ctx.restore();
     },
 
     /**
+     * Changes made to the 'justify' text alignment, so that it takes care of letter spacing.
+     * Changes made are for PosterMyWall.
      * @private
      * @param {String} method Method name ("fillText" or "strokeText")
      * @param {CanvasRenderingContext2D} ctx Context to render on
@@ -475,8 +519,8 @@
         this._renderChars(method, ctx, line, left, top, lineIndex);
         return;
       }
-
-      var lineWidth = this._getLineWidth(ctx, lineIndex),
+      // subtract letter space from the last character of the line
+      var lineWidth = this._getLineWidth(ctx, lineIndex) - this.letterSpacing,
           totalWidth = this.width;
       if (totalWidth >= lineWidth) {
         // stretch the line
@@ -489,7 +533,7 @@
 
         for (var i = 0, len = words.length; i < len; i++) {
           this._renderChars(method, ctx, words[i], left + leftOffset, top, lineIndex);
-          leftOffset += ctx.measureText(words[i]).width + spaceWidth;
+          leftOffset += (this._getWidthOfWords(ctx, words[i], lineIndex) + spaceWidth);
         }
       }
       else {
@@ -536,7 +580,6 @@
       for (var i = 0, len = this._textLines.length; i < len; i++) {
         var heightOfLine = this._getHeightOfLine(ctx, i),
             maxHeight = heightOfLine / this.lineHeight;
-
         this._renderTextLine(
           'fillText',
           ctx,

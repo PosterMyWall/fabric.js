@@ -825,6 +825,8 @@
     },
 
     /**
+     * Function now takes care of letter spacing.
+     * Changes made are for PosterMyWall.
      * @private
      * @param {CanvasRenderingContext2D} ctx Context to render on
      * @param {String} _char
@@ -849,7 +851,7 @@
 
       // short-circuit if no styles
       if (this.isEmptyStyles() && this._charWidthsCache[cacheProp] && this.caching) {
-        return this._charWidthsCache[cacheProp];
+        return this._charWidthsCache[cacheProp] + this.letterSpacing;
       }
 
       if (typeof styleDeclaration.shadow === 'string') {
@@ -879,7 +881,7 @@
         this._charWidthsCache[cacheProp] = ctx.measureText(_char).width;
       }
 
-      return this._charWidthsCache[cacheProp];
+      return this._charWidthsCache[cacheProp] + this.letterSpacing;
     },
 
     /**
@@ -963,6 +965,8 @@
     },
 
     /**
+     * Function now takes care of letter spacing.
+     * Changes made are for PosterMyWall.
      * @private
      * @param {CanvasRenderingContext2D} ctx Context to render on
      */
@@ -976,13 +980,13 @@
       var cacheProp = this._getCacheProp(_char, styleDeclaration);
 
       if (this._charWidthsCache[cacheProp] && this.caching) {
-        return this._charWidthsCache[cacheProp];
+        return this._charWidthsCache[cacheProp] + this.letterSpacing;
       }
       else if (ctx) {
         ctx.save();
         var width = this._applyCharStylesGetWidth(ctx, _char, lineIndex, charIndex);
         ctx.restore();
-        return width;
+        return width + this.letterSpacing;
       }
     },
 
@@ -1030,6 +1034,8 @@
     },
 
     /**
+     * Function now takes care of letter spacing.
+     * Changes made are for PosterMyWall.
      * @private
      * @param {CanvasRenderingContext2D} ctx Context to render on
      * @param {Number} lineIndex
@@ -1044,7 +1050,7 @@
           numSpaces = line.length - line.replace(this._reSpacesAndTabs, '').length,
           width = widthDiff / numSpaces;
       this.__widthOfSpace[lineIndex] = width;
-      return width;
+      return width + this.letterSpacing;
     },
 
     /**
@@ -1120,7 +1126,6 @@
         this.width,
         this.height
       );
-
       ctx.restore();
     },
 
