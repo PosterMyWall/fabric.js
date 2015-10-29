@@ -1012,7 +1012,10 @@
       if (!noTransform) {
         this.transform(ctx);
       }
-      this._setStrokeStyles(ctx);
+      if(this.type !== 'path') {
+        this._setStrokeStyles(ctx);
+      }
+
       this._setFillStyles(ctx);
       if (this.transformMatrix) {
         ctx.transform.apply(ctx, this.transformMatrix);

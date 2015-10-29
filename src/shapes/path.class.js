@@ -447,6 +447,8 @@
         previous = current;
       }
       this._renderFill(ctx);
+      ctx.restore();
+      this._setStrokeStyles(ctx);
       this._renderStroke(ctx);
     },
 
