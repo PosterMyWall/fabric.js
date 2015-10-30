@@ -37,6 +37,7 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
     var format = options.format || 'png',
         quality = options.quality || 1,
         multiplier = options.multiplier || 1,
+        clear = options.clear || false,
         cropping = {
           left: options.left,
           top: options.top,
@@ -45,7 +46,7 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
         };
 
     if (multiplier !== 1) {
-      return this.__toDataURLWithMultiplier(format, quality, cropping, multiplier);
+      return this.__toDataURLWithMultiplier(format, quality, cropping, multiplier, clear);
     }
     else {
       return this.__toDataURL(format, quality, cropping);
@@ -110,7 +111,7 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
   /**
    * @private
    */
-  __toDataURLWithMultiplier: function(format, quality, cropping, multiplier) {
+  __toDataURLWithMultiplier: function(format, quality, cropping, multiplier, clear) {
 
     var origWidth = this.getWidth(),
         origHeight = this.getHeight(),
@@ -124,6 +125,19 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
     if (multiplier > 1) {
       this.setWidth(scaledWidth).setHeight(scaledHeight);
     }
+
+    if (clear) {
+      // Store the current transformation matrix
+      ctx.save();
+
+      // Use the identity matrix while clearing the canvas
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, scaledWidth, scaledHeight);
+
+      // Restore the transform
+      ctx.restore();
+    }
+
     ctx.scale(multiplier, multiplier);
 
     if (cropping.left) {
@@ -152,8 +166,6 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
     else if (activeObject && this.deactivateAll) {
       this.deactivateAll();
     }
-
-    this.renderAll(true);
 
     var data = this.__toDataURL(format, quality, cropping);
 
