@@ -382,10 +382,10 @@
     if (el) {
       return el;
     }
-    var node, i, idAttr, nodelist = doc.getElementsByTagName('*');
+    var node, i, nodelist = doc.getElementsByTagName('*');
     for (i = 0; i < nodelist.length; i++) {
       node = nodelist[i];
-      if (idAttr === node.getAttribute('id')) {
+      if (id === node.getAttribute('id')) {
         return node;
       }
     }
@@ -468,11 +468,14 @@
         viewBoxWidth, viewBoxHeight, matrix, el,
         widthAttr = element.getAttribute('width'),
         heightAttr = element.getAttribute('height'),
+        x = element.getAttribute('x') || 0,
+        y = element.getAttribute('y') || 0,
+        preserveAspectRatio = element.getAttribute('preserveAspectRatio') || '',
         missingViewBox = (!viewBoxAttr || !reViewBoxTagNames.test(element.tagName)
                            || !(viewBoxAttr = viewBoxAttr.match(reViewBoxAttrValue))),
         missingDimAttr = (!widthAttr || !heightAttr || widthAttr === '100%' || heightAttr === '100%'),
         toBeParsed = missingViewBox && missingDimAttr,
-        parsedDim = { };
+        parsedDim = { }, translateMatrix = '';
 
     parsedDim.width = 0;
     parsedDim.height = 0;
@@ -505,14 +508,21 @@
     }
 
     // default is to preserve aspect ratio
-    // preserveAspectRatio attribute to be implemented
-    scaleY = scaleX = (scaleX > scaleY ? scaleY : scaleX);
+    preserveAspectRatio = fabric.util.parsePreserveAspectRatioAttribute(preserveAspectRatio);
+    if (preserveAspectRatio.alignX !== 'none') {
+      //translate all container for the effect of Mid, Min, Max
+      scaleY = scaleX = (scaleX > scaleY ? scaleY : scaleX);
+    }
 
-    if (scaleX === 1 && scaleY === 1 && minX === 0 && minY === 0) {
+    if (scaleX === 1 && scaleY === 1 && minX === 0 && minY === 0 && x === 0 && y === 0) {
       return parsedDim;
     }
 
-    matrix = ' matrix(' + scaleX +
+    if (x || y) {
+      translateMatrix = ' translate(' + parseUnit(x) + ' ' + parseUnit(y) + ') ';
+    }
+
+    matrix = translateMatrix + ' matrix(' + scaleX +
                   ' 0' +
                   ' 0 ' +
                   scaleY + ' ' +
@@ -647,15 +657,15 @@
   function _createSVGPattern(markup, canvas, property) {
     if (canvas[property] && canvas[property].toSVG) {
       markup.push(
-        '<pattern x="0" y="0" id="', property, 'Pattern" ',
+        '\t<pattern x="0" y="0" id="', property, 'Pattern" ',
           'width="', canvas[property].source.width,
           '" height="', canvas[property].source.height,
-          '" patternUnits="userSpaceOnUse">',
-        '<image x="0" y="0" ',
+          '" patternUnits="userSpaceOnUse">\n',
+        '\t\t<image x="0" y="0" ',
         'width="', canvas[property].source.width,
         '" height="', canvas[property].source.height,
         '" xlink:href="', canvas[property].source.src,
-        '"></image></pattern>'
+        '"></image>\n\t</pattern>\n'
       );
     }
   }
@@ -1018,7 +1028,7 @@
           '@font-face {',
             'font-family: ', objects[i].fontFamily, '; ',
             'src: url(\'', objects[i].path, '\')',
-          '}'
+          '}\n'
           //jscs:enable validateIndentation
         ].join('');
       }
@@ -1026,11 +1036,11 @@
       if (markup) {
         markup = [
           //jscs:disable validateIndentation
-          '<style type="text/css">',
+          '\t<style type="text/css">',
             '<![CDATA[',
               markup,
             ']]>',
-          '</style>'
+          '</style>\n'
           //jscs:enable validateIndentation
         ].join('');
       }

@@ -289,7 +289,7 @@
     /**
      * Finds index corresponding to beginning or end of a word
      * @param {Number} selectionStart Index of a character
-     * @param {Number} direction: 1 or -1
+     * @param {Number} direction 1 or -1
      * @return {Number} Index of the beginning or end of a word
      */
     searchWordBoundary: function(selectionStart, direction) {
@@ -533,7 +533,11 @@
         this._removeCharsFromTo(this.selectionStart, this.selectionEnd);
         this.setSelectionEnd(this.selectionStart);
       }
-
+      //short circuit for block paste
+      if (!useCopiedStyle && this.isEmptyStyles()) {
+        this.insertChar(_chars, false);
+        return;
+      }
       for (var i = 0, len = _chars.length; i < len; i++) {
         if (useCopiedStyle) {
           style = fabric.copiedTextStyle[i];
@@ -554,11 +558,12 @@
         _char + this.text.slice(this.selectionEnd);
       this._textLines = this._splitTextIntoLines();
       this.insertStyleObjects(_char, isEndOfLine, styleObject);
-      this.setSelectionStart(this.selectionStart + 1);
-      this.setSelectionEnd(this.selectionStart);
+      this.selectionStart += _char.length;
+      this.selectionEnd = this.selectionStart;
       if (skipUpdate) {
         return;
       }
+      this._updateTextarea();
       this.canvas && this.canvas.renderAll();
       this.setCoords();
       this.fire('changed');
@@ -698,35 +703,35 @@
           lineIndex      = cursorLocation.lineIndex,
           charIndex      = cursorLocation.charIndex;
 
-      if (isBeginningOfLine) {
+      this._removeStyleObject(isBeginningOfLine, cursorLocation, lineIndex, charIndex);
+    },
 
-        var textOnPreviousLine     = this._textLines[lineIndex - 1],
-            newCharIndexOnPrevLine = textOnPreviousLine
-              ? textOnPreviousLine.length
-              : 0;
+    _getTextOnPreviousLine: function(lIndex) {
+      return this._textLines[lIndex - 1];
+    },
+
+    _removeStyleObject: function(isBeginningOfLine, cursorLocation, lineIndex, charIndex) {
+
+      if (isBeginningOfLine) {
+        var textOnPreviousLine     = this._getTextOnPreviousLine(cursorLocation.lineIndex),
+            newCharIndexOnPrevLine = textOnPreviousLine ? textOnPreviousLine.length : 0;
 
         if (!this.styles[lineIndex - 1]) {
           this.styles[lineIndex - 1] = {};
         }
-
         for (charIndex in this.styles[lineIndex]) {
           this.styles[lineIndex - 1][parseInt(charIndex, 10) + newCharIndexOnPrevLine]
             = this.styles[lineIndex][charIndex];
         }
-
-        this.shiftLineStyles(lineIndex, -1);
-
+        this.shiftLineStyles(cursorLocation.lineIndex, -1);
       }
       else {
         var currentLineStyles = this.styles[lineIndex];
 
         if (currentLineStyles) {
           delete currentLineStyles[charIndex];
-          //console.log('deleting', lineIndex, charIndex + offset);
         }
-
         var currentLineStylesCloned = clone(currentLineStyles);
-
         // shift all styles by 1 backwards
         for (var i in currentLineStylesCloned) {
           var numericIndex = parseInt(i, 10);

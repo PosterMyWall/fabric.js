@@ -254,7 +254,7 @@
     textDecoration:       '',
 
     /**
-     * Text alignment. Possible values: "left", "center", or "right".
+     * Text alignment. Possible values: "left", "center", "right" or "justify".
      * @type String
      * @default
      */
@@ -515,29 +515,28 @@
       top -= this.fontSize * this._fontSizeFraction;
 
       // short-circuit
-      if (this.textAlign !== 'justify') {
+      var lineWidth = this._getLineWidth(ctx, lineIndex);
+      if (this.textAlign !== 'justify' || this.width < lineWidth) {
         this._renderChars(method, ctx, line, left, top, lineIndex);
         return;
       }
-      // subtract letter space from the last character of the line
-      var lineWidth = this._getLineWidth(ctx, lineIndex) - this.letterSpacing,
-          totalWidth = this.width;
-      if (totalWidth >= lineWidth) {
-        // stretch the line
-        var words = line.split(/\s+/),
-            wordsWidth = this._getWidthOfWords(ctx, line, lineIndex),
-            widthDiff = totalWidth - wordsWidth,
-            numSpaces = words.length - 1,
-            spaceWidth = widthDiff / numSpaces,
-            leftOffset = 0;
 
-        for (var i = 0, len = words.length; i < len; i++) {
-          this._renderChars(method, ctx, words[i], left + leftOffset, top, lineIndex);
-          leftOffset += (this._getWidthOfWords(ctx, words[i], lineIndex) + spaceWidth);
+      // stretch the line
+      var words = line.split(/\s+/),
+          wordsWidth = this._getWidthOfWords(ctx, line, lineIndex),
+          widthDiff = this.width - wordsWidth,
+          numSpaces = words.length - 1,
+          spaceWidth = numSpaces > 0 ? widthDiff / numSpaces : 0,
+          leftOffset = 0, charOffset = 0, word;
+
+      for (var i = 0, len = words.length; i < len; i++) {
+        while (line[charOffset] === ' ' && charOffset < line.length) {
+          charOffset++;
         }
-      }
-      else {
-        this._renderChars(method, ctx, line, left, top, lineIndex);
+        word = words[i];
+        this._renderChars(method, ctx, word, left + leftOffset, top, lineIndex, charOffset);
+        leftOffset += ctx.measureText(word).width + spaceWidth;
+        charOffset += word.length;
       }
     },
 
