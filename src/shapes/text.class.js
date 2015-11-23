@@ -515,7 +515,8 @@
       top -= this.fontSize * this._fontSizeFraction;
 
       // short-circuit
-      var lineWidth = this._getLineWidth(ctx, lineIndex);
+      // subtract letter space from the last character of the line
+      var lineWidth = this._getLineWidth(ctx, lineIndex) - this.letterSpacing;
       if (this.textAlign !== 'justify' || this.width < lineWidth) {
         this._renderChars(method, ctx, line, left, top, lineIndex);
         return;
@@ -535,7 +536,7 @@
         }
         word = words[i];
         this._renderChars(method, ctx, word, left + leftOffset, top, lineIndex, charOffset);
-        leftOffset += ctx.measureText(word).width + spaceWidth;
+        leftOffset += (this._getWidthOfWords(ctx, words[i], lineIndex) + spaceWidth);
         charOffset += word.length;
       }
     },
