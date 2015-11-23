@@ -450,6 +450,7 @@
       ctx.restore();
       this._setStrokeStyles(ctx);
       this._renderStroke(ctx);
+      ctx.save();
     },
 
     /**
