@@ -304,13 +304,13 @@
 
       target.setCoords();
 
+      this._restoreOriginXY(target);
+
       // only fire :modified event if target coordinates were changed during mousedown-mouseup
       if (this.stateful && target.hasStateChanged()) {
         this.fire('object:modified', { target: target });
         target.fire('modified');
       }
-
-      this._restoreOriginXY(target);
     },
 
     /**
