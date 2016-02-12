@@ -469,7 +469,94 @@
       });
       return this;
     },
+    /**
+     * Aligns the items in the group horizontally.
+     * @param {String} type Must be either 'left', 'right' or 'center'
+     */
+    horizontalAlignment: function(type) {
+      var groupWidth = this.width,
+          objects = this._objects,
+          i = 0,
+          padding = this.padding,
+          corners, tl, offsetX;
 
+      switch(type) {
+        case 'left':
+          for(i=0; i < objects.length; i++) {
+            corners = objects[i].getCornerPoints(objects[i].getCenterPoint());
+            tl = corners.tl.x;
+            var minX = Math.min(tl, corners.tr.x, corners.bl.x, corners.br.x);
+            offsetX = (minX < tl) ? (tl - minX) : 0;
+            objects[i].set('left', -groupWidth/2 + padding + offsetX);
+          }
+          break;
+        case 'right':
+          for(i=0; i < objects.length; i++) {
+            corners = objects[i].getCornerPoints(objects[i].getCenterPoint());
+            tl = corners.tl.x;
+            var maxX = Math.max(tl, corners.tr.x, corners.bl.x, corners.br.x);
+            offsetX = (maxX > tl) ? (maxX - tl) : 0;
+            objects[i].set('left', (groupWidth/2 - offsetX - padding));
+          }
+          break;
+        case 'center':
+          for(i=0; i < objects.length; i++) {
+            corners = objects[i].getCornerPoints({
+              x: 0,
+              y: objects[i].top
+            });
+            objects[i].set('left', corners.tl.x);
+          }
+          break;
+        default:
+              return
+      }
+      this.canvas.renderAll();
+    },
+    /**
+     * Aligns the items in the group vertically.
+     * @param {String} type Must be either 'top', 'bottom' or 'center'
+     */
+    verticalAlignment: function (type) {
+      var groupHeight = this.height,
+          objects = this._objects,
+          i = 0,
+          padding = this.padding,
+          corners, tl, offsetY;
+
+      switch(type) {
+        case 'top':
+          for(i=0; i < objects.length; i++) {
+            corners = objects[i].getCornerPoints(objects[i].getCenterPoint());
+            tl = corners.tl.y;
+            var minY = Math.min(tl, corners.tr.y, corners.bl.y, corners.br.y);
+            offsetY = (minY < tl) ? (tl - minY) : 0;
+            objects[i].set('top', -groupHeight/2 + padding + offsetY);
+          }
+          break;
+        case 'bottom':
+          for(i=0; i < objects.length; i++) {
+            corners = objects[i].getCornerPoints(objects[i].getCenterPoint());
+            tl = corners.tl.y;
+            var maxY = Math.max(tl, corners.tr.y, corners.bl.y, corners.br.y);
+            offsetY = (maxY > tl) ? (maxY - tl) : 0;
+            objects[i].set('top', (groupHeight/2 - padding - offsetY));
+          }
+          break;
+        case 'center':
+          for(i=0; i < objects.length; i++) {
+            corners = objects[i].getCornerPoints({
+              x: objects[i].left,
+              y: 0
+            });
+            objects[i].set('top', corners.tl.y);
+          }
+          break;
+        default:
+              return
+      }
+      this.canvas.renderAll();
+    },
     /**
      * @private
      */

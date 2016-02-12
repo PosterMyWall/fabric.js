@@ -1554,6 +1554,59 @@
         y: pClicked.y - objectLeftTop.y
       };
     },
+    /**
+     * This function returns corner points of the object relative to the given center.
+     * @param {Object} center center of object
+     * @returns {{tl: ({x: number, y: number}|*), tr: ({x: number, y: number}|*), bl: ({x: number, y: number}|*), br: ({x: number, y: *}|*)}}
+       */
+    getCornerPoints: function (center) {
+      var angle = this.angle,
+          width = this.width * this.scaleX,
+          height = this.height * this.scaleY,
+
+          tl, tr, bl, br,
+          // coordinates of the center point
+          x = center.x,
+          y = center.y,
+          theta = fabric.util.degreesToRadians(angle);
+
+      if (width < 0) {
+        width = Math.abs(width);
+      }
+
+      var sinTh = Math.sin(theta),
+          cosTh = Math.cos(theta),
+          _angle = width > 0 ? Math.atan(height / width) : 0,
+          _hypotenuse = (width / Math.cos(_angle)) / 2,
+          offsetX = Math.cos(_angle + theta) * _hypotenuse,
+          offsetY = Math.sin(_angle + theta) * _hypotenuse;
+
+      tl = {
+        x: x - offsetX,
+        y: y - offsetY
+      };
+
+      tr = {
+        x: (x - offsetX) + (width * cosTh),
+        y: (y - offsetY) + (width * sinTh)
+      };
+
+      br = {
+        x: x + offsetX,
+        y: y + offsetY
+      };
+
+      bl = {
+        x: (x - offsetX) - (height * sinTh),
+        y: (y - offsetY) + (height * cosTh)
+      };
+      return {
+        tl: tl,
+        tr: tr,
+        bl: bl,
+        br: br
+      };
+    },
 
     /**
      * Sets canvas globalCompositeOperation for specific object
