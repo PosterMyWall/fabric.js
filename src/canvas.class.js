@@ -783,7 +783,11 @@
       if (angle < 0) {
         angle = 360 + angle;
       }
-
+      // snap rotation angle at multiples of 90 degrees
+      var snap = angle % 90;
+      if(snap > 85 || snap < 5) {
+        angle = (Math.round(angle / 10) * 10);
+      }
       t.target.angle = angle % 360;
     },
 
