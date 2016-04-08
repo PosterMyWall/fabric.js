@@ -55,6 +55,7 @@
         eventjs.add(this.upperCanvasEl, 'orientation', this._onOrientationChange);
         eventjs.add(this.upperCanvasEl, 'shake', this._onShake);
         eventjs.add(this.upperCanvasEl, 'longpress', this._onLongPress);
+        eventjs.add(this.upperCanvasEl, 'dbltap', this._onDoubleTap);
       }
     },
 
@@ -70,6 +71,7 @@
       this._onDrag = this._onDrag.bind(this);
       this._onShake = this._onShake.bind(this);
       this._onLongPress = this._onLongPress.bind(this);
+      this._onDoubleTap = this._onDoubleTap.bind(this);
       this._onOrientationChange = this._onOrientationChange.bind(this);
       this._onMouseWheel = this._onMouseWheel.bind(this);
     },
@@ -93,6 +95,7 @@
         eventjs.remove(this.upperCanvasEl, 'orientation', this._onOrientationChange);
         eventjs.remove(this.upperCanvasEl, 'shake', this._onShake);
         eventjs.remove(this.upperCanvasEl, 'longpress', this._onLongPress);
+        eventjs.remove(this.upperCanvasEl, 'dbltap', this._onDoubleTap);
       }
     },
 
@@ -148,6 +151,15 @@
      */
     _onLongPress: function(e, self) {
       this.__onLongPress && this.__onLongPress(e, self);
+    },
+
+    /**
+     * @private
+     * @param {Event} [e] Event object fired on Event.js shake
+     * @param {Event} [self] Inner Event object
+     */
+    _onDoubleTap: function(e, self) {
+      this.__onDoubleTap && this.__onDoubleTap(e, self);
     },
 
     /**

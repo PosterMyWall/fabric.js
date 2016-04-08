@@ -116,6 +116,12 @@
       });
     },
 
+    __onDoubleTap: function(e, self) {
+      this.fire('touch:dbltap', {
+        e: e, self: self
+      });
+    },
+
     /**
      * Scales an object by a factor
      * @param {Number} s The scale factor to apply to the current scale level
