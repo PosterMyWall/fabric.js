@@ -192,6 +192,12 @@
     isDrawingMode:          false,
 
     /**
+     * When true, alignment guides will appear while moving objects on canvas.
+     * @type Boolean
+     */
+    areAlignmentGuidesEnabled:          true,
+
+    /**
      * @private
      */
     _initInteractive: function() {
