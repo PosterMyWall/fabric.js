@@ -607,6 +607,7 @@
       this._performTransformAction(e, transform, pointer);
 
       this.renderAll();
+      transform.target._renderTransformDetail(transform);
     },
 
     /**

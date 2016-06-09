@@ -405,6 +405,20 @@
     cornerSize:               22,
 
     /**
+     * offset to give while rendering transform detail
+     * @type Number
+     * @default
+     */
+    transformDetailOffset: 30,
+
+    /**
+     * object's transform details are rendered only if this flag is true
+     * @type Boolean
+     * @default
+     */
+    showTransformDetail: false,
+
+    /**
      * When true, object's controlling corners are rendered as transparent inside (i.e. stroke instead of fill)
      * @type Boolean
      * @default
@@ -1122,6 +1136,165 @@
       ctx.restore();
     },
 
+    /**
+     * Renders transform detail for the object.
+     * On object move, display position coordinates
+     * On object resize, display dimensions
+     * On object rotate, display rotation angle
+     * @param {object} transform
+     */
+    _renderTransformDetail: function (transform) {
+      if(!this.showTransformDetail) {
+        return;
+      }
+      this.setCoords();
+
+      var text = this._getTextForTransform(transform.action),
+          ctx = this.canvas.contextContainer;
+
+      ctx.font = "10px Arial";
+      var textWidth = ctx.measureText(text).width,
+          coords = this._getCoordinatesToRenderTransformDetail(transform.corner, textWidth),
+          // padding for the text box
+          padding = 1.5,
+          textHeight = 8;
+
+
+      // draw a rectangle
+      ctx.save();
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 0.3;
+      ctx.fillRect(coords.x - padding, coords.y - textHeight - padding, textWidth + 2*padding, textHeight + 2*padding + 1);
+      ctx.restore();
+
+      // draw text inside the triangle
+      ctx.save();
+      ctx.fillStyle = "#000000";
+      ctx.fillText(text, Math.round(coords.x), Math.round(coords.y));
+      ctx.restore();
+    },
+
+    /**
+     * Returns the string containing transform detail to show(angle, coordinates or dimensions)
+     * @param {string} action type of transform (drag, rotate aor scale)
+     * @returns {string}
+     */
+    _getTextForTransform: function (action) {
+      var text = '';
+
+      switch (action) {
+        case 'drag':
+          text = Math.round(this.left) + ", " + Math.round(this.top);
+          break;
+        case 'rotate':
+          text = Math.round(this.angle) + "°";
+          break;
+        case 'scaleX':
+        case 'scaleY':
+        case 'scale':
+          text = Math.round(this.width * this.scaleX) + " x " + Math.round(this.height * this.scaleY);
+          break;
+      }
+      return text;
+    },
+
+    /**
+     * Calculates and returns coordinates of a point at which dimension will be shown
+     * @param {string} corner corner at which text should be displayed
+     * @param {number} textWidth width of text to render
+     * @returns {fabric.Point}
+     */
+    _getCoordinatesToRenderTransformDetail: function (corner, textWidth) {
+      var dx,dy,
+          angle = this.angle,
+          theta = fabric.util.degreesToRadians(angle),
+          // these offset values will be used for centering the text
+          textWidthOffset = textWidth / 2,
+          textHeightOffset = 4;
+
+      switch (corner) {
+        case 'tl':
+          dx = (this.oCoords.tl.x) + (this.transformDetailOffset * Math.sin(theta - Math.PI/4));
+          dy = (this.oCoords.tl.y) - (this.transformDetailOffset * Math.cos(theta - Math.PI/4));
+
+          if(angle >= 0 && angle < 45 || angle > 225) {
+            dx -= textWidth;
+          }
+          break;
+
+        case 'tr':
+          dx = (this.oCoords.tr.x) + (this.transformDetailOffset * Math.sin(theta + Math.PI/4));
+          dy = (this.oCoords.tr.y) - (this.transformDetailOffset * Math.cos(theta + Math.PI/4));
+
+          if(angle > 135 && angle < 315) {
+            dx -= textWidth;
+          }
+          break;
+
+        case 'bl':
+          dx = (this.oCoords.bl.x) - (this.transformDetailOffset * Math.sin(theta + Math.PI/4));
+          dy = (this.oCoords.bl.y) + (this.transformDetailOffset * Math.cos(theta + Math.PI/4));
+
+          if(angle >= 0 && angle < 135 || angle > 315) {
+            dx -= textWidth;
+          }
+          break;
+
+        case 'br':
+          dx = (this.oCoords.br.x) + (this.transformDetailOffset * Math.cos(theta + Math.PI/4));
+          dy = (this.oCoords.br.y) + (this.transformDetailOffset * Math.sin(theta + Math.PI/4));
+
+          if(angle > 45 && angle < 225) {
+            dx -= textWidth;
+          }
+          break;
+
+        case 'mt':
+          dx = (this.oCoords.mtr.x ) - textWidthOffset + ((this.transformDetailOffset + textWidthOffset) * Math.sin(theta));
+          dy = (this.oCoords.mtr.y ) + textHeightOffset  - (this.transformDetailOffset * Math.cos(theta));
+          break;
+
+        case 'mr':
+          dx = (this.oCoords.mr.x) - textWidthOffset + ((this.transformDetailOffset + textWidthOffset) * Math.cos(theta));
+          dy = (this.oCoords.mr.y) + textHeightOffset + (this.transformDetailOffset * Math.sin(theta));
+          break;
+
+        case 'mb':
+          dx = (this.oCoords.mb.x) - textWidthOffset - ((this.transformDetailOffset + textWidthOffset) * Math.sin(theta));
+          dy = (this.oCoords.mb.y) + textHeightOffset + (this.transformDetailOffset * Math.cos(theta));
+          break;
+
+        case 'ml':
+          dx = (this.oCoords.ml.x) - textWidthOffset - ((this.transformDetailOffset + textWidthOffset) * Math.cos(theta));
+          dy = (this.oCoords.ml.y) + textHeightOffset - (this.transformDetailOffset * Math.sin(theta));
+          break;
+
+        case 'mtr':
+          dx = (this.oCoords.mtr.x ) - textWidthOffset + ((this.transformDetailOffset + textWidthOffset) * Math.sin(theta));
+          dy = (this.oCoords.mtr.y ) + textHeightOffset  - (this.transformDetailOffset * Math.cos(theta));
+          break;
+
+        default:
+          if(angle > 45 && angle < 135) {
+            dx = (this.oCoords.bl.x) - (this.transformDetailOffset * Math.sin(theta + Math.PI/4)) - textWidth;
+            dy = (this.oCoords.bl.y) + (this.transformDetailOffset * Math.cos(theta + Math.PI/4));
+          }
+          else if(angle > 135 && angle < 225) {
+            dx = (this.oCoords.br.x) + (this.transformDetailOffset * Math.cos(theta + Math.PI/4)) - textWidth;
+            dy = (this.oCoords.br.y) + (this.transformDetailOffset * Math.sin(theta + Math.PI/4));
+          }
+          else if(angle > 225 && angle < 315) {
+            dx = (this.oCoords.tr.x) + (this.transformDetailOffset * Math.sin(theta + Math.PI/4)) - textWidth;
+            dy = (this.oCoords.tr.y) - (this.transformDetailOffset * Math.cos(theta + Math.PI/4));
+          }
+          else {
+            dx = (this.oCoords.tl.x) + (this.transformDetailOffset * Math.sin(theta - Math.PI / 4)) - textWidth;
+            dy = (this.oCoords.tl.y) - (this.transformDetailOffset * Math.cos(theta - Math.PI / 4));
+          }
+      }
+
+      return new fabric.Point(dx, dy)
+    },
     /**
      * @private
      * @param {CanvasRenderingContext2D} ctx Context to render on
