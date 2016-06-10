@@ -412,11 +412,11 @@
     transformDetailOffset: 30,
 
     /**
-     * object's transform details are rendered only if this flag is true
+     * Object's transform details are rendered only if this flag is true
      * @type Boolean
      * @default
      */
-    showTransformDetail: false,
+    showTransformDetails: false,
 
     /**
      * When true, object's controlling corners are rendered as transparent inside (i.e. stroke instead of fill)
@@ -1144,7 +1144,7 @@
      * @param {object} transform
      */
     _renderTransformDetail: function (transform) {
-      if(!this.showTransformDetail) {
+      if(!this.showTransformDetails) {
         return;
       }
       this.setCoords();
