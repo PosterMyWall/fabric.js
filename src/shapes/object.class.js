@@ -416,7 +416,7 @@
      * @type Boolean
      * @default
      */
-    showTransformDetails: false,
+    showTransformDetails: true,
 
     /**
      * When true, object's controlling corners are rendered as transparent inside (i.e. stroke instead of fill)
