@@ -1,7 +1,7 @@
 #! /bin/bash
 
-node build.js modules=animation,interaction,gestures,image_filters,text,itext,textbox,shadow,gradient,alignment
+node build.js modules=animation,interaction,gestures,image_filters,text,itext,textbox,shadow,gradient,alignment,parser
 
-cp ./dist/fabric.js /usr/postermywall/svn/trunk/server/assets/javascript/vendor/fabric.js
+cp ./dist/fabric.js /postermywall/svn/trunk/server/assets/javascript/vendor/fabric.js
 
 echo 'Copied file to PosterMyWall web.'
