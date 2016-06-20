@@ -1184,7 +1184,27 @@
 
       switch (action) {
         case 'drag':
-          text = Math.round(this.left) + ", " + Math.round(this.top);
+            var x,y,
+                angle = this.angle,
+                corners = this.getCornerPoints(this.getCenterPoint());
+
+          if(angle > 45 && angle < 135) {
+            x = corners.bl.x;
+            y = corners.bl.y
+          }
+          else if(angle > 135 && angle < 225) {
+            x = corners.br.x;
+            y = corners.br.y
+          }
+          else if(angle > 225 && angle < 315) {
+            x = corners.tr.x;
+            y = corners.tr.y
+          }
+          else {
+            x = corners.tl.x;
+            y = corners.tl.y
+          }
+          text = Math.round(x) + ", " + Math.round(y);
           break;
         case 'rotate':
           text = Math.round(this.angle) + "°";
@@ -1210,7 +1230,8 @@
           theta = fabric.util.degreesToRadians(angle),
           // these offset values will be used for centering the text
           textWidthOffset = textWidth / 2,
-          textHeightOffset = 4;
+          textHeight = 8,
+          textHeightOffset = textHeight/2;
 
       switch (corner) {
         case 'tl':
@@ -1291,6 +1312,25 @@
             dx = (this.oCoords.tl.x) + (this.transformDetailOffset * Math.sin(theta - Math.PI / 4)) - textWidth;
             dy = (this.oCoords.tl.y) - (this.transformDetailOffset * Math.cos(theta - Math.PI / 4));
           }
+      }
+
+      // ensure that dx and dy are within the canvas range
+      var cw = this.canvas.width,
+          ch = this.canvas.height,
+          padding = 3;
+
+      if(dx < 0) {
+        dx -= (dx - padding)
+      }
+      else if(dx + textWidth > cw) {
+        dx -= (dx - cw + textWidth + padding)
+      }
+
+      if((dy - textHeight) < 0) {
+        dy -= (dy - textHeight - padding)
+      }
+      else if(dy > ch) {
+        dy -= (dy - ch + padding)
       }
 
       return new fabric.Point(dx, dy)
