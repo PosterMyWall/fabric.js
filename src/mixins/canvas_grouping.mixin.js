@@ -156,11 +156,15 @@
           continue;
         }
 
-        if (currentObject.intersectsWithRect(selectionX1Y1, selectionX2Y2) ||
-            currentObject.isContainedWithinRect(selectionX1Y1, selectionX2Y2) ||
-            currentObject.containsPoint(selectionX1Y1) ||
-            currentObject.containsPoint(selectionX2Y2)
-        ) {
+        // only add object to group if it is not locked.
+        if ((currentObject.intersectsWithRect(selectionX1Y1, selectionX2Y2) ||
+                currentObject.isContainedWithinRect(selectionX1Y1, selectionX2Y2) ||
+                currentObject.containsPoint(selectionX1Y1) ||
+                currentObject.containsPoint(selectionX2Y2)
+            ) &&
+            !(currentObject.lockMovementX && currentObject.lockMovementY &&
+            currentObject.lockScalingX && currentObject.lockScalingY &&
+            currentObject.lockRotation)) {
           currentObject.set('active', true);
           group.push(currentObject);
 
