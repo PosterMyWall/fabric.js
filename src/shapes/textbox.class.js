@@ -332,9 +332,15 @@
     setOnGroup: function(key, value) {
       if (key === 'scaleX') {
         this.set('scaleX', Math.abs(1 / value));
-        this.set('width', (this.get('width') * value) /
-          (typeof this.__oldScaleX === 'undefined' ? 1 : this.__oldScaleX));
-        this.__oldScaleX = value;
+        // this.set('width', (this.get('width') * value) /
+        //   (typeof this.__oldScaleX === 'undefined' ? 1 : this.__oldScaleX));
+        // this.__oldScaleX = value;
+      }
+      if (key == 'scaleY') {
+        this.set('scaleY', Math.abs(1 / value));
+        // this.set('fontSize', (this.fontSize * value) /
+        //     (typeof this.__oldScaleY=== 'undefined' ? 1 : this.__oldScaleY));
+        // this.__oldScaleY = value;
       }
     },
 
