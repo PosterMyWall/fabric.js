@@ -1215,6 +1215,7 @@
      * @return {fabric.Canvas} thisArg
      */
     discardActiveGroup: function (e) {
+      this.fire('before:selection:cleared', {target: e});
       this._discardActiveGroup();
       this.fire('selection:cleared', { e: e });
       return this;
