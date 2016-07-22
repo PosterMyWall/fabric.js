@@ -215,9 +215,10 @@
       fontSize:         true,
       fontStyle:        true,
       lineHeight:       true,
+      letterSpacing:    true,
+      text:             true,
       textDecoration:   true,
-      textAlign:        true,
-      backgroundColor:  true
+      textAlign:        true
     },
 
     /**
@@ -267,6 +268,7 @@
       }
       this.transform(ctx);
       this._setShadow(ctx);
+      this._renderGroupBackground(ctx);
       this.clipTo && fabric.util.clipContext(this, ctx);
       // the array is now sorted in order of highest first, so start from end
       for (var i = 0, len = this._objects.length; i < len; i++) {
@@ -277,7 +279,25 @@
 
       ctx.restore();
     },
-
+    /**
+     * Renders background color
+     * @param ctx Context to render on
+     * @private
+     */
+    _renderGroupBackground: function(ctx) {
+      if (!this.backgroundColor) {
+        return;
+      }
+      ctx.save();
+      ctx.fillStyle = this.backgroundColor;
+      ctx.fillRect(
+          -this.width/2 - 11/this.scaleX,
+          -this.height/2 - 11/this.scaleY,
+          this.width + 22/this.scaleX,
+          this.height + 22/this.scaleY
+      );
+      ctx.restore();
+    },
     /**
      * Renders controls and borders for the object
      * @param {CanvasRenderingContext2D} ctx Context to render on

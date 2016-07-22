@@ -1003,6 +1003,23 @@
     },
 
     /**
+     * 
+     * @param ctx
+     * @returns {*}
+     * @private
+     */
+    _getTextWidth: function(ctx) {
+      var maxWidth = this._getLineWidth(ctx, 0);
+
+      for (var i = 1, len = this._textLines.length; i < len; i++) {
+        var currentLineWidth = this._getLineWidth(ctx, i);
+        if (currentLineWidth > maxWidth) {
+          maxWidth = currentLineWidth;
+        }
+      }
+      return maxWidth;
+    },
+    /**
      * Function now takes care of letter spacing.
      * Changes made are for PosterMyWall.
      * @private
