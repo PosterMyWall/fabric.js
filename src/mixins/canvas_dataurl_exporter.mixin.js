@@ -210,7 +210,7 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
     group.origHasControls = group.hasControls;
     group.origBorderColor = group.borderColor;
 
-    group.hasControls = true;
+    group.hasControls = false;
     group.borderColor = 'rgba(0,0,0,0)';
 
     group.forEachObject(function(o) {
@@ -226,6 +226,7 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
     group.hideControls = group.origHideControls;
     group.borderColor = group.origBorderColor;
 
+    group.hasControls = true;
     group.forEachObject(function(o) {
       o.borderColor = o.origBorderColor;
       delete o.origBorderColor;
