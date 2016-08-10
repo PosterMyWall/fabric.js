@@ -1106,10 +1106,10 @@
       ctx.fillStyle = this.backgroundColor;
 
       ctx.fillRect(
-        this._getLeftOffset() - 11,
-        this._getTopOffset() - 11,
-        this.width + 22,
-        this.height + 22
+        this._getLeftOffset() - this.padding,
+        this._getTopOffset() - this.padding,
+        this.width + (this.padding * 2),
+        this.height + (this.padding * 2)
       );
       ctx.restore();
     },

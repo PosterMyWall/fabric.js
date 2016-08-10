@@ -291,10 +291,10 @@
       ctx.save();
       ctx.fillStyle = this.backgroundColor;
       ctx.fillRect(
-          -this.width/2 - 11/this.scaleX,
-          -this.height/2 - 11/this.scaleY,
-          this.width + 22/this.scaleX,
-          this.height + 22/this.scaleY
+          -this.width/2 - this.padding/this.scaleX,
+          -this.height/2 - this.padding/this.scaleY,
+          this.width + (this.padding*2)/this.scaleX,
+          this.height + (this.padding*2)/this.scaleY
       );
       ctx.restore();
     },
