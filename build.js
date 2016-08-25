@@ -192,7 +192,7 @@ var filesToInclude = [
   'src/mixins/canvas_dataurl_exporter.mixin.js',
 
   ifSpecifiedInclude('serialization', 'src/mixins/canvas_serialization.mixin.js'),
-  ifSpecifiedInclude('gestures', 'src/mixins/canvas_gestures.mixin.js'),
+  // ifSpecifiedInclude('gestures', 'src/mixins/canvas_gestures.mixin.js'),
 
   'src/shapes/object.class.js',
   'src/mixins/object_origin.mixin.js',
