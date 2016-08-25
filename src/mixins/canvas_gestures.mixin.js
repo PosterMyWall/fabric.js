@@ -21,24 +21,24 @@
      */
     __onTransformGesture: function(e, self) {
 
-      if (this.isDrawingMode || !e.touches || e.touches.length !== 2 || 'gesture' !== self.gesture) {
-        return;
-      }
-
-      var target = this.findTarget(e);
-      if ('undefined' !== typeof target) {
-        this.__gesturesParams = {
-          e: e,
-          self: self,
-          target: target
-        };
-
-        this.__gesturesRenderer();
-      }
-
-      this.fire('touch:gesture', {
-        target: target, e: e, self: self
-      });
+      // if (this.isDrawingMode || !e.touches || e.touches.length !== 2 || 'gesture' !== self.gesture) {
+      //   return;
+      // }
+      //
+      // var target = this.findTarget(e);
+      // if ('undefined' !== typeof target) {
+      //   this.__gesturesParams = {
+      //     e: e,
+      //     self: self,
+      //     target: target
+      //   };
+      //
+      //   this.__gesturesRenderer();
+      // }
+      //
+      // this.fire('touch:gesture', {
+      //   target: target, e: e, self: self
+      // });
     },
     __gesturesParams: null,
     __gesturesRenderer: function() {
