@@ -1,4 +1,3 @@
-
 (function(global) {
 
     'use strict';
@@ -7,20 +6,20 @@
         clone  = fabric.util.object.clone;
 
     /**
-     * Tabs class, based on Groups, allows the user to insert tear-off tabs on canvas
-     * @class fabric.Tabs
+     * Table class, based on Groups, allows the user to insert table on canvas
+     * @class fabric.Table
      * @extends fabric.Group
      * @mixes fabric.Observable
-     * @return {fabric.Tabs} thisArg
+     * @return {fabric.Table} thisArg
      */
-    fabric.Tabs = fabric.util.createClass(fabric.Group, fabric.Observable, {
+    fabric.Table = fabric.util.createClass(fabric.Group, fabric.Observable, {
         /**
          * Type of an object
          * @type String
          * @default
          */
-        type: 'tabs'
+        type: 'table'
     });
-    fabric.Tabs.fromObject = fabric.Group.fromObject
-    
+    fabric.Table.fromObject = fabric.Group.fromObject
+
 })(typeof exports !== 'undefined' ? exports : this);
