@@ -268,7 +268,16 @@
       }
       this.transform(ctx);
       this._setShadow(ctx);
-      this._renderGroupBackground(ctx);
+
+     // styles and layout for tables
+      if(this instanceof fabric.Table) {
+        this.renderTableCustomBackground(ctx);
+        this.renderTableBorders(ctx);
+      }
+      else {
+        this.renderGroupBackground(ctx);
+      }
+
       this.clipTo && fabric.util.clipContext(this, ctx);
       // the array is now sorted in order of highest first, so start from end
       for (var i = 0, len = this._objects.length; i < len; i++) {
@@ -282,9 +291,8 @@
     /**
      * Renders background color
      * @param ctx Context to render on
-     * @private
      */
-    _renderGroupBackground: function(ctx) {
+    renderGroupBackground: function(ctx) {
       if (!this.backgroundColor) {
         return;
       }
