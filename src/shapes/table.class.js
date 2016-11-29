@@ -6,7 +6,7 @@
         clone  = fabric.util.object.clone;
 
     /**
-     * Table class, based on Groups, allows the user to insert table on canvas
+     * Table class, based on Groups, provides support for rendering table/schedules on canvas
      * @class fabric.Table
      * @extends fabric.Group
      * @mixes fabric.Observable
@@ -19,11 +19,71 @@
          * @default
          */
         type: 'table',
+        /**
+         * Number of table rows
+         * @type {Number}
+         */
+        rows: 0,
+        /**
+         * Number of table columns
+         * @type {Number}
+         */
+        columns: 0,
+        /**
+         * Layout style
+         * @type {String}
+         */
+        layoutType: '',
+        /**
+         * Background color 1 for alternate table background
+         * @type {String}
+         */
         alternateBackgroundColor1: null,
+        /**
+         * Background color 2 for alternate table background
+         * @type {String}
+         */
         alternateBackgroundColor2: null,
-        homeAwayColor: null,
-        rowsWithHomeAwayColorEnabled: [],
+        /**
+         * Background color for highlighted rows
+         * @type {String}
+         */
+        highlightedRowsBackgroundColor: null,
+        /**
+         * Array containing indices of highlighted rows
+         * @type {Array}
+         */
+        highlightedRows: [],
+        /**
+         * 2D array containing table data
+         * @type {Array}
+         */
+        tableArray: [[]],
+        /**
+         * Spacing Between rows of table
+         * @type {Number}
+         */
+        ySpacing: 0,
+        /**
+         * Spacing Between column of table
+         * @type {Number}
+         */
+        xSpacing: 0,
+        /**
+         * Property used for showing the 'edit content' button
+         * @type {boolean}
+         */
+        hasButton: true,
+        /**
+         * Text to use for edit button
+         * @type {String}
+         */
+        buttonText: 'edit content',
 
+        /**
+         * Draws the table/schedule border
+         * @param {CanvasRenderingContext2D} ctx context to draw on
+         */
         renderTableBorders: function (ctx) {
             if (!this.stroke || this.strokeWidth === 0) {
                 return;
@@ -31,88 +91,27 @@
             ctx.save();
             this._setStrokeStyles(ctx);
             ctx.strokeRect(
-                ~~(-(this.width / 2)) - this._getPaddingX(),
-                ~~(-(this.height / 2)) - this._getPaddingY(),
-                ~~(this.width) + 2 * this._getPaddingX(),
-                ~~(this.height) + 2 * this._getPaddingY()
+                (-(this.width / 2)),
+                (-(this.height / 2)),
+                (this.width),
+                (this.height)
             );
 
-            if (this._isCustomTableLayout()) {
-                this._drawColumnBorders(ctx);
-                this._drawRowBorders(ctx);
+            // if custom table layout them draw rows and column border too
+            if (this.isTableLayout()) {
+                this.drawColumnBorders(ctx);
+                this.drawRowBorders(ctx);
             }
             ctx.restore();
         },
-
-        /**
-         * OLD CODE, saving for later
-         */
-        // renderTableAlternateBackground: function (ctx) {
-        //     if(!(this.alternateBackgroundColor1 && this.alternateBackgroundColor2 && this._isCustomTableLayout())) {
-        //         return
-        //     }
-        //     ctx.save();
-        //     var objects = this.getObjects();
-        //     for(var i = 0; i < this.__rows; i++) {
-        //         var rowHeight = this.getHeightOfRow(i),
-        //             top, height, applyFill = true, padding = 1;
-        //
-        //         // if(this.rowsWithHomeAwayColorEnabled.indexOf(i) != -1) {
-        //         //     ctx.fillStyle = this.homeAwayColor;
-        //         // }
-        //         // else if(this.backgroundColor != null) {
-        //         //     ctx.fillStyle = this.backgroundColor;
-        //         // }
-        //         // else if(this.alternateBackgroundColor1 && this.alternateBackgroundColor2) {
-        //         //     if((i % 2) == 0) {
-        //         //         ctx.fillStyle =  this.alternateBackgroundColor1;
-        //         //     }
-        //         //     else {
-        //         //         ctx.fillStyle =  this.alternateBackgroundColor2;
-        //         //     }
-        //         // }
-        //         // else {
-        //         //     applyFill = false
-        //         // }
-        //
-        //         if((i % 2) == 0) {
-        //             ctx.fillStyle =  this.alternateBackgroundColor1;
-        //         }
-        //         else {
-        //             ctx.fillStyle =  this.alternateBackgroundColor2;
-        //         }
-        //
-        //         if(applyFill) {
-        //             if (i == 0) {
-        //                 top = -this.height / 2 - this._getPaddingY();
-        //                 height = this._getPaddingY() + rowHeight + objects[i].fontSize / 4;
-        //             }
-        //             else if (i == (this.__rows - 1)) {
-        //                 top = objects[i].top - objects[i].fontSize / 4;
-        //                 height = rowHeight + objects[i].fontSize / 4 + this._getPaddingY();
-        //             }
-        //             else {
-        //                 top = objects[i].top - objects[i].fontSize / 4;
-        //                 height = rowHeight + objects[i].fontSize / 2;
-        //             }
-        //             ctx.fillRect(
-        //                 -this.width / 2 - this._getPaddingX(),
-        //                 top,
-        //                 this.width + 2 * this._getPaddingX(),
-        //                 height
-        //             );
-        //         }
-        //     }
-        //     ctx.restore();
-        // },
         /**
          * This function is responsible for rendering the background of table.
          * It loops over all the rows in the table and draws the appropriate color rectangle for each row.
          * If more then one consecutive rows have background of same color then it draws a one big rectangle of that color.
-         * @param ctx context to render on
+         * @param {CanvasRenderingContext2D} ctx context to render on
          */
         renderTableCustomBackground: function (ctx) {
-            if((this.rowsWithHomeAwayColorEnabled.length == 0 && !(this.alternateBackgroundColor1 && this.alternateBackgroundColor2)) || !this._isCustomTableLayout()) {
+            if((this.highlightedRows.length == 0 && !(this.alternateBackgroundColor1 && this.alternateBackgroundColor2)) || !this.isTableLayout()) {
                 this.renderGroupBackground(ctx);
                 return
             }
@@ -122,32 +121,28 @@
             var objects = this.getObjects(),
                 top = null,
                 height = null,
-                renderBackground = false,
-                rowSpacing = this.fontSize/2;
+                renderBackground = false;
 
             for(var i = 0; i < backgroundData.length; i++) {
                 renderBackground = false;
                 if(backgroundData[i] != 'none') {
                     if (top == null) {
                         if (i == 0) {
-                            top = -this.height / 2 - this._getPaddingY();
+                            top = -this.height / 2;
                         }
                         else {
-                            top = objects[i].top - rowSpacing / 2;
+                            top = objects[i].top - this.ySpacing / 2;
                         }
                     }
 
                     if(backgroundData[i] != backgroundData[i+1]) {
                         // set height of rectangle to render
-                        height = Math.abs(top - objects[i].top) + this.getHeightOfRow(i) + rowSpacing / 2;
-                        if (i == this.__rows - 1) {
-                            height = height + this._getPaddingY() - rowSpacing / 2;
-                        }
+                        height = Math.abs(top - objects[i].top) + this.getHeightOfRow(i) + this.ySpacing / 2;
                         renderBackground = true;
 
                         switch(backgroundData[i]) {
-                            case 'selected':
-                                ctx.fillStyle = this.homeAwayColor;
+                            case 'highlight':
+                                ctx.fillStyle = this.highlightedRowsBackgroundColor;
                                 break;
                             case 'color':
                                 ctx.fillStyle = this.backgroundColor;
@@ -166,9 +161,9 @@
 
                     if (renderBackground) {
                         ctx.fillRect(
-                            -this.width / 2 - this._getPaddingX(),
+                            -this.width / 2 ,
                             top,
-                            this.width + 2 * this._getPaddingX(),
+                            this.width,
                             height
                         );
                         top = null;
@@ -178,17 +173,20 @@
             }
             ctx.restore();
         },
-        _getPaddingX: function () {
-            return this.padding/this.scaleX
-        },
-        _getPaddingY: function () {
-            return this.padding/this.scaleY
-        },
+        /**
+         * Returns an array containing string values corresponding to rows background color.
+         * 'highlight' for selected rows
+         * 'color' for when colored background is selected by user
+         * 'alternate1' for even rows when alternate background is selected
+         * 'alternate2' for odd rows when alternate background is selected
+         * 'none' for transparent background
+         * @returns {Array}
+         */
         getTableBackGroundData: function () {
             var data = [];
-            for(var i = 0; i < this.__rows; i++) {
-                if(this.rowsWithHomeAwayColorEnabled.indexOf(i) != -1) {
-                    data.push('selected');
+            for(var i = 0; i < this.rows; i++) {
+                if(this.highlightedRows.indexOf(i) != -1) {
+                    data.push('highlight');
                 }
                 else if (this.backgroundColor != null) {
                     data.push('color')
@@ -206,39 +204,48 @@
 
                 }
             }
-
             return data;
         },
         /**
          * Returns the height of an item in a given row with max height,
          * this value is basically the minimum space in y-axis needed by this row in a table.
-         * @param row
+         * @param {Number} row
          * @returns {Number}
          */
         getHeightOfRow: function (row) {
             var height = 0, h;
-            for (var i = 0; i < this.__columns; i++) {
-                h = this.__tableArray[i][row]._getTextHeight();
+            for (var i = 0; i < this.columns; i++) {
+                h = this.tableArray[i][row]._getTextHeight();
                 if (h > height) {
                     height = h
                 }
             }
             return height;
         },
+        /**
+         * Returns the width of an item in a given column with max width,
+         * this value is basically the minimum space in x-axis needed by this column in a table.
+         * @param {Number} column column index
+         * @returns {Number} minimum width required by this column
+         */
         getWidthOfColumn: function (column) {
             var width = 0, w;
-            for (var i = 0; i < this.__rows; i++) {
-                w = this.__tableArray[column][i]._getTextWidth();
+            for (var i = 0; i < this.rows; i++) {
+                w = this.tableArray[column][i]._getTextWidth();
                 if (w > width) {
                     width = w
                 }
             }
             return width;
         },
-        _drawColumnBorders: function (ctx) {
-            var objects = this.getObjects();
-            var x = this.__rows, maxWidth, w, itemIndex;
-            for (var i = 2; i <= this.__columns; i++) {
+        /**
+         * renders border for table columns
+         * @param {CanvasRenderingContext2D} ctx context to render on
+         */
+        drawColumnBorders: function (ctx) {
+            var objects = this.getObjects(),
+                x = this.rows, maxWidth, w, itemIndex;
+            for (var i = 2; i <= this.columns; i++) {
                 maxWidth = 0;
                 while (objects[x] && objects[x].column == i) {
                     w = objects[x].width;
@@ -249,17 +256,21 @@
                     x++;
                 }
                 ctx.beginPath();
-                ctx.moveTo(objects[itemIndex].left - objects[i].fontSize / 2, -(this.height/2) - this._getPaddingY());
-                ctx.lineTo(objects[itemIndex].left - objects[i].fontSize / 2, -(this.height/2) + this.height + this._getPaddingY());
+                ctx.moveTo(objects[itemIndex].left - this.xSpacing / 2, -(this.height/2));
+                ctx.lineTo(objects[itemIndex].left - this.xSpacing / 2, -(this.height/2) + this.height);
                 ctx.stroke();
             }
         },
-        _drawRowBorders: function (ctx) {
+        /**
+         * renders border for table rows
+         * @param {CanvasRenderingContext2D} ctx context to render on
+         */
+        drawRowBorders: function (ctx) {
             var objects = this.getObjects();
-            for (var i = 1; i < this.__rows; i++) {
-                var startX = -this.width/2 - this._getPaddingX(),
-                    startY = objects[i].top - objects[i].fontSize / 4,
-                    endX = startX + this.width + this._getPaddingX() * 2,
+            for (var i = 1; i < this.rows; i++) {
+                var startX = -this.width/2,
+                    startY = objects[i].top - this.ySpacing / 2,
+                    endX = startX + this.width,
                     endY = startY;
                 ctx.beginPath();
                 ctx.moveTo(startX, startY);
@@ -267,8 +278,12 @@
                 ctx.stroke();
             }
         },
-        _isCustomTableLayout: function () {
-            return this.__layoutType == 'layout-1';
+        /**
+         * Returns true if design is simple table structure('custom-table' or 'layout-1'), false otherwise
+         * @returns {boolean}
+         */
+        isTableLayout: function () {
+            return this.layoutType == 'layout-1' || this.layoutType == 'custom-table';
         }
     });
     fabric.Table.fromObject = fabric.Group.fromObject

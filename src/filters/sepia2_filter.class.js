@@ -39,10 +39,10 @@
         r = data[i];
         g = data[i + 1];
         b = data[i + 2];
-
-        data[i] = (r * 0.393 + g * 0.769 + b * 0.189 ) / 1.351;
-        data[i + 1] = (r * 0.349 + g * 0.686 + b * 0.168 ) / 1.203;
-        data[i + 2] = (r * 0.272 + g * 0.534 + b * 0.131 ) / 2.140;
+        
+        data[i] = Math.min((r * 0.393 + g * 0.769 + b * 0.189), 255);
+        data[i + 1] = Math.min((r * 0.349 + g * 0.686 + b * 0.168), 255);
+        data[i + 2] = Math.min((r * 0.272 + g * 0.534 + b * 0.131), 255);
       }
 
       context.putImageData(imageData, 0, 0);

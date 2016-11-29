@@ -449,7 +449,8 @@
         ctx.font = '13px sans-serif';
         ctx.fillStyle = this.borderColor;
         // 5px padding of text from the left edge. 14px adjustment which depends on the font size and baseline of the text
-        ctx.fillText(this.buttonText, bLeft + 5, bTop + 14);
+        // left position is calculated in order to horizontally center the text inside button
+        ctx.fillText(this.buttonText, bLeft + (this.buttonWidth - ctx.measureText(this.buttonText).width)/2, bTop + 15);
         ctx.restore();
       }
       else {
