@@ -1192,6 +1192,17 @@
     },
 
     /**
+     * Makes a group of given objects and sets it as active on canvas
+     * @param {Array} obbjects Array of fabric.Object to select as a group
+     * @param {Event} [e] Event (passed along when firing "object:selected")
+     */
+    setObjectsAsActiveGroup: function (objects, e) {
+      this.deactivateAll();
+      this._groupObjects(e, objects);
+      this._setCoordsOfActiveGroup();
+    },
+
+    /**
      * Returns currently active group
      * @return {fabric.Group} Current group
      */

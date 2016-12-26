@@ -111,30 +111,26 @@
       });
     },
 
-    /**
-     * @private
-     * @param {Event} e mouse event
-     */
-    _groupSelectedObjects: function (e) {
-
-      var group = this._collectObjects();
-
-      // do not create group for 1 element only
-      if (group.length === 1) {
-        this.setActiveObject(group[0], e);
-      }
-      else if (group.length > 1) {
-        group = new fabric.Group(group.reverse(), {
-          canvas: this
-        });
-        group.addWithUpdate();
-        this.setActiveGroup(group, e);
-        group.saveCoords();
-        this.fire('selection:created', { target: group });
-        this.renderAll();
-      }
-    },
-
+      /**
+       * @private
+       * @param {Event} e mouse event
+       */
+      _groupObjects: function (e, objects) {
+// do not create group for 1 element only
+          if (objects.length === 1) {
+              this.setActiveObject(objects[0], e);
+          }
+          else if (objects.length > 1) {
+              var group = new fabric.Group(objects.reverse(), {canvas: this
+              });
+              group.addWithUpdate();
+              this.setActiveGroup(group, e);
+              group.saveCoords();
+              this.fire('selection:created', {target: group});
+              this.renderAll();
+          }
+      },
+    
     /**
      * @private
      */
@@ -178,24 +174,30 @@
       return group;
     },
 
+      /**
+       * @private
+       */
+      _setCoordsOfActiveGroup: function () {
+          var activeGroup = this.getActiveGroup();
+          if (activeGroup) {
+              activeGroup.setObjectsCoords().setCoords();
+              activeGroup.isMoving = false;
+              this.setCursor(this.defaultCursor);
+          }
+
+          // clear selection and current transformation
+          this._groupSelector = null;
+          this._currentTransform = null;
+      },
     /**
      * @private
      */
-    _maybeGroupObjects: function(e) {
-      if (this.selection && this._groupSelector) {
-        this._groupSelectedObjects(e);
-      }
-
-      var activeGroup = this.getActiveGroup();
-      if (activeGroup) {
-        activeGroup.setObjectsCoords().setCoords();
-        activeGroup.isMoving = false;
-        this.setCursor(this.defaultCursor);
-      }
-
-      // clear selection and current transformation
-      this._groupSelector = null;
-      this._currentTransform = null;
+    _maybeGroupObjects: function (e) {
+        if (this.selection && this._groupSelector) {
+            var objects = this._collectObjects();
+            this._groupObjects(e, objects);
+        }
+        this._setCoordsOfActiveGroup();
     }
   });
 
