@@ -539,7 +539,7 @@
         default:
               return
       }
-      this.canvas.renderAll();
+      this.canvas.fire('object:modified', {target: this});
     },
     /**
      * Aligns the items in the group vertically.
@@ -583,7 +583,7 @@
         default:
               return
       }
-      this.canvas.renderAll();
+      this.canvas.fire('object:modified', {target: this});
     },
     /**
      * @private
