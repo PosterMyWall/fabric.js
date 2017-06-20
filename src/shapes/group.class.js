@@ -49,6 +49,17 @@
     strokeWidth: 0,
 
     /**
+     * Whether to render a rectangle background or a tilted background
+     * @type Boolean
+     */
+    leanBackground: false,
+
+    /**
+     * Leanness of background
+     * @type Number
+     */
+    leanBackgroundOffset: 0,
+    /**
      * Constructor
      * @param {Object} objects Group objects
      * @param {Object} [options] Options object
@@ -296,15 +307,33 @@
       if (!this.backgroundColor) {
         return;
       }
-      ctx.save();
-      ctx.fillStyle = this.backgroundColor;
-      ctx.fillRect(
-          -this.width/2,
-          -this.height/2,
-          this.width,
-          this.height
-      );
-      ctx.restore();
+
+      if (this.leanBackground) {
+        ctx.save();
+        ctx.fillStyle = this.backgroundColor;
+        ctx.beginPath();
+        var offset = this.leanBackgroundOffset/4,
+            slant = this.leanBackgroundOffset/2,
+            yFix = this.leanBackgroundOffset/10;
+        ctx.moveTo(-this.width/2 + offset, -this.height/2 - yFix);
+        ctx.lineTo(-this.width/2 + this.width + offset, -this.height/2 - yFix);
+        ctx.lineTo(-this.width/2 + this.width - slant + offset, -this.height/2 + this.height - yFix);
+        ctx.lineTo(-this.width/2 - slant + offset, -this.height/2 + this.height - yFix);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      else {
+        ctx.save();
+        ctx.fillStyle = this.backgroundColor;
+        ctx.fillRect(
+            -this.width / 2,
+            -this.height / 2,
+            this.width,
+            this.height
+        );
+        ctx.restore();
+      }
     },
     /**
      * Renders controls and borders for the object

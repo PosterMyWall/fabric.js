@@ -46,7 +46,7 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
         };
 
     if (multiplier !== 1) {
-      return this.__toDataURLWithMultiplier(format, quality, cropping, multiplier, clear);
+      return this.__toDataURLWithMultiplier(format, quality, cropping, multiplier, clear, options.scaleShadow);
     }
     else {
       return this.__toDataURL(format, quality, cropping);
@@ -108,7 +108,7 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
   /**
    * @private
    */
-  __toDataURLWithMultiplier: function(format, quality, cropping, multiplier, clear) {
+  __toDataURLWithMultiplier: function(format, quality, cropping, multiplier, clear, scaleShadow) {
 
     var origWidth = this.getWidth(),
         origHeight = this.getHeight(),
@@ -135,6 +135,11 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
       ctx.restore();
     }
 
+    // temporary fix for the shadow bug while taking the snapshot
+    // remove the code related to scaleShadow before updating the fabricjs with latest build on github
+    if(scaleShadow) {
+      ctx.__multiplier = multiplier;
+    }
     ctx.scale(multiplier, multiplier);
 
     if (cropping.left) {
@@ -171,6 +176,9 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
     this.width = origWidth;
     this.height = origHeight;
 
+    if(scaleShadow) {
+      ctx.__multiplier = null;
+    }
     ctx.scale(1 / multiplier,  1 / multiplier);
     this.setWidth(origWidth).setHeight(origHeight);
 

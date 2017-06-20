@@ -1347,6 +1347,12 @@
       var multX = (this.canvas && this.canvas.viewportTransform[0]) || 1,
           multY = (this.canvas && this.canvas.viewportTransform[3]) || 1;
 
+      // temporary fix for the shadow bug while taking the snapshot
+      // remove the below if statement and code inside before updating the fabricjs with latest build on github
+      if(typeof ctx.__multiplier == 'number') {
+        multX *= ctx.__multiplier;
+        multY *= ctx.__multiplier;
+      }
       ctx.shadowColor = this.shadow.color;
       ctx.shadowBlur = this.shadow.blur * (multX + multY) * (this.scaleX + this.scaleY) / 4;
       ctx.shadowOffsetX = this.shadow.offsetX * multX * this.scaleX;

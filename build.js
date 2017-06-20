@@ -253,6 +253,7 @@ var filesToInclude = [
 
   ifSpecifiedInclude('tabs', 'src/shapes/tabs.class.js'),
   ifSpecifiedInclude('table', 'src/shapes/table.class.js'),
+  ifSpecifiedInclude('menu', 'src/shapes/menu.class.js'),
 
   ifSpecifiedInclude('node', 'src/node.js'),
 
