@@ -461,6 +461,13 @@
     hasButton: false,
 
     /**
+     * PosterMyWall property used for showing the middle buttons on right and left edges.
+     * @type Boolean
+     * @default
+     */
+    hasMiddleButtons: false,
+
+    /**
      * PosterMyWall property for the width of the button.
      * @type Number
      * @default

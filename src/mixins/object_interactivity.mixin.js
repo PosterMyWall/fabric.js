@@ -313,6 +313,16 @@
             left + width/2,
             top + height);
       }
+      
+      if(this.hasMiddleButtons) {
+        this._drawControl('pmwBtnMr', ctx, methodName,
+            left + width,
+            top + height/2);
+
+        this._drawControl('pmwBtnMl', ctx, methodName,
+            left,
+            top + height/2);
+      }
 
       // top-left
       this._drawControl('tl', ctx, methodName,
@@ -453,6 +463,10 @@
         ctx.fillText(this.buttonText, bLeft + (this.buttonWidth - ctx.measureText(this.buttonText).width)/2, bTop + 15);
         ctx.restore();
       }
+      else if(control == 'pmwBtnMr' || control == 'pmwBtnMl') {
+        ctx[methodName](left, top, size, size);
+        ctx['strokeRect'](left, top, size, size);
+      }
       else {
         isVML() || this.transparentCorners || ctx.clearRect(left, top, size, size);
         ctx[methodName](left, top, size, size);
@@ -522,7 +536,9 @@
           mr: true,
           mb: true,
           mtr: true,
-          btn: true
+          btn: true,
+          pmwBtnMr: true,
+          pmwBtnMl: true
         };
       }
       return this._controlsVisibility;

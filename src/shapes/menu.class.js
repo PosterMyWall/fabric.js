@@ -13,6 +13,7 @@
      * @return {fabric.Table} thisArg
      */
     fabric.CustomBorderTable = fabric.util.createClass(fabric.Table, fabric.Observable, {
+        hasMiddleButtons: true,
         /**
          * Renders vertical borders for table Style Menu Layouts
          * @param {CanvasRenderingContext2D} ctx context to render on

@@ -349,6 +349,11 @@
           this.oCoords.btn = new fabric.Point(coords.x - (sinTh * ((currentHeight)/2)), coords.y + (cosTh * ((currentHeight)/2)));
 
       }
+      
+      if(this.hasMiddleButtons) {
+        this.oCoords.pmwBtnMr = mr;
+        this.oCoords.pmwBtnMl = ml;
+      }
 
       // set coordinates of the draggable boxes in the corners used to scale/rotate the image
       this._setCornerCoords && this._setCornerCoords();

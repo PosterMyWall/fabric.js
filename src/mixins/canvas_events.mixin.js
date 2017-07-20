@@ -320,8 +320,14 @@
 
       // only fire :modified event if target coordinates were changed during mousedown-mouseup
       if (this.stateful && target.hasStateChanged()) {
-        this.fire('object:modified', { target: target });
-        target.fire('modified');
+        if(transform.corner == 'pmwBtnMr' || transform.corner == 'pmwBtnMl') {
+          target.fire('widthModified');
+        }
+        else {
+          this.fire('object:modified', { target: target });
+          target.fire('modified');
+        }
+
       }
     },
 
@@ -623,6 +629,12 @@
         this._rotateObject(x, y);
         this._fire('rotating', target, e);
       }
+      else if (action === 'scale' && transform.corner === 'pmwBtnMr') {
+        this._fire('pmwBtnMr:modifyingWidth', target, e);
+      }
+      else if (action === 'scale' && transform.corner === 'pmwBtnMl') {
+        this._fire('pmwBtnMl:modifyingWidth', target, e);
+      }
       else if (action === 'scale') {
         this._onScale(e, transform, x, y);
         this._fire('scaling', target, e);
@@ -737,6 +749,12 @@
       }
       else if (corner === 'btn') {
         this.setCursor('pointer');
+      }
+      else if (corner === 'pmwBtnMr') {
+        this.setCursor('e-resize');
+      }
+      else if (corner === 'pmwBtnMl') {
+        this.setCursor('w-resize');
       }
       else {
         this.setCursor(this.defaultCursor);
