@@ -516,8 +516,7 @@
 
       // short-circuit
       // subtract letter space from the last character of the line
-      var lineWidth = this._getLineWidth(ctx, lineIndex) - this.letterSpacing;
-      if (this.textAlign !== 'justify' || this.width < lineWidth) {
+      if (this.textAlign !== 'justify') {
         this._renderChars(method, ctx, line, left, top, lineIndex);
         return;
       }
