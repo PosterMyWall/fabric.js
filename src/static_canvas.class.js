@@ -889,6 +889,35 @@
     },
 
     /**
+     * Renders canvas without clearing it first
+     * @return {fabric.StaticCanvas}
+     */
+    renderAllWithoutClearing: function () {
+      var canvasToDrawOn = this.contextContainer,
+          activeGroup = this.getActiveGroup();
+
+      if (this.clipTo) {
+        fabric.util.clipContext(this, canvasToDrawOn);
+      }
+
+      this._renderBackground(canvasToDrawOn);
+      this._renderObjects(canvasToDrawOn, activeGroup);
+      this._renderActiveGroup(canvasToDrawOn, activeGroup);
+
+      if (this.clipTo) {
+        canvasToDrawOn.restore();
+      }
+
+      this._renderOverlay(canvasToDrawOn);
+
+      if (this.controlsAboveOverlay && this.interactive) {
+        this.drawControls(canvasToDrawOn);
+      }
+
+      return this;
+    },
+
+    /**
      * @private
      * @param {CanvasRenderingContext2D} ctx Context to render on
      * @param {fabric.Group} activeGroup
