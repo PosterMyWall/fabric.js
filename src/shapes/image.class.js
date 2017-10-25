@@ -325,7 +325,11 @@
       if (!imgElement) {
         return;
       }
-
+      if (imgElement.nodeName === 'VIDEO') {
+          callback();
+          return;
+      }
+        
       var imgEl = imgElement,
           canvasEl = fabric.util.createCanvasElement(),
           replacement = fabric.util.createImage(),
@@ -393,7 +397,11 @@
         elementToDraw = this.applyFilters(null, this.resizeFilters, this._filteredEl || this._originalElement, true);
       }
       else {
-        elementToDraw = this._element;
+          if (this._element.nodeName === 'VIDEO') {
+              elementToDraw = this._applyVideoFilter(this._element);
+          } else {
+              elementToDraw = this._element;
+          }
       }
       elementToDraw && ctx.drawImage(elementToDraw,
                                      x + imageMargins.marginX,
@@ -404,7 +412,26 @@
 
       this._renderStroke(ctx);
     },
+      /**
+       * Applies filter of video element
+       * @param elementToDraw
+       * @return {*|CanvasElement}
+       * @private
+       */
+      _applyVideoFilter: function (elementToDraw) {
+          var videoEl = elementToDraw,
+              canvasEl = fabric.util.createCanvasElement();
 
+          canvasEl.width = videoEl.width;
+          canvasEl.height = videoEl.height;
+          canvasEl.getContext('2d').drawImage(videoEl, 0, 0, videoEl.width, videoEl.height);
+
+          this.filters.forEach(function (filter) {
+              filter && filter.applyTo(canvasEl);
+          });
+
+          return canvasEl;
+      },
     /**
      * @private, needed to check if image needs resize
      */
