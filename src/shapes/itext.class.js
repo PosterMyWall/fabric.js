@@ -1,6 +1,13 @@
 (function() {
 
-  var clone = fabric.util.object.clone;
+  function parseDecoration(object) {
+    if (object.textDecoration) {
+      object.textDecoration.indexOf('underline') > -1 && (object.underline = true);
+      object.textDecoration.indexOf('line-through') > -1 && (object.linethrough = true);
+      object.textDecoration.indexOf('overline') > -1 && (object.overline = true);
+      delete object.textDecoration;
+    }
+  }
 
   /**
    * IText class (introduced in <b>v1.4</b>) Events are also fired with "text:"
@@ -128,26 +135,11 @@
     cursorDuration: 600,
 
     /**
-     * Object containing character styles
-     * (where top-level properties corresponds to line number and 2nd-level properties -- to char number in a line)
-     * @type Object
-     * @default
-     */
-    styles: null,
-
-    /**
      * Indicates whether internal text char widths can be cached
      * @type Boolean
      * @default
      */
     caching: true,
-
-    /**
-     * @private
-     * @type Boolean
-     * @default
-     */
-    _skipFillStrokeCheck: false,
 
     /**
      * @private
@@ -172,12 +164,13 @@
     /**
      * @private
      */
-    _charWidthsCache: { },
+    __widthOfSpace: [],
 
     /**
-     * @private
+     * Helps determining when the text is in composition, so that the cursor
+     * rendering is altered.
      */
-    __widthOfSpace: [ ],
+    inCompositionMode: false,
 
     /**
      * Constructor
@@ -186,37 +179,8 @@
      * @return {fabric.IText} thisArg
      */
     initialize: function(text, options) {
-      this.styles = options ? (options.styles || { }) : { };
       this.callSuper('initialize', text, options);
       this.initBehavior();
-    },
-
-    /**
-     * @private
-     */
-    _clearCache: function() {
-      this.callSuper('_clearCache');
-      this.__widthOfSpace = [ ];
-    },
-
-    /**
-     * Returns true if object has no styling
-     */
-    isEmptyStyles: function() {
-      if (!this.styles) {
-        return true;
-      }
-      var obj = this.styles;
-
-      for (var p1 in obj) {
-        for (var p2 in obj[p1]) {
-          /*jshint unused:false */
-          for (var p3 in obj[p1][p2]) {
-            return false;
-          }
-        }
-      }
-      return true;
     },
 
     /**
@@ -225,12 +189,7 @@
      */
     setSelectionStart: function(index) {
       index = Math.max(index, 0);
-      if (this.selectionStart !== index) {
-        this.fire('selection:changed');
-        this.canvas && this.canvas.fire('text:selection:changed', { target: this });
-        this.selectionStart = index;
-      }
-      this._updateTextarea();
+      this._updateAndFire('selectionStart', index);
     },
 
     /**
@@ -239,71 +198,55 @@
      */
     setSelectionEnd: function(index) {
       index = Math.min(index, this.text.length);
-      if (this.selectionEnd !== index) {
-        this.fire('selection:changed');
-        this.canvas && this.canvas.fire('text:selection:changed', { target: this });
-        this.selectionEnd = index;
+      this._updateAndFire('selectionEnd', index);
+    },
+
+    /**
+     * @private
+     * @param {String} property 'selectionStart' or 'selectionEnd'
+     * @param {Number} index new position of property
+     */
+    _updateAndFire: function(property, index) {
+      if (this[property] !== index) {
+        this._fireSelectionChanged();
+        this[property] = index;
       }
       this._updateTextarea();
     },
 
     /**
-     * Gets style of a current selection/cursor (at the start position)
-     * @param {Number} [startIndex] Start index to get styles at
-     * @param {Number} [endIndex] End index to get styles at
-     * @return {Object} styles Style object at a specified (or current) index
+     * Fires the even of selection changed
+     * @private
      */
-    getSelectionStyles: function(startIndex, endIndex) {
-
-      if (arguments.length === 2) {
-        var styles = [ ];
-        for (var i = startIndex; i < endIndex; i++) {
-          styles.push(this.getSelectionStyles(i));
-        }
-        return styles;
-      }
-
-      var loc = this.get2DCursorLocation(startIndex),
-          style = this._getStyleDeclaration(loc.lineIndex, loc.charIndex);
-
-      return style || {};
+    _fireSelectionChanged: function() {
+      this.fire('selection:changed');
+      this.canvas && this.canvas.fire('text:selection:changed', { target: this });
     },
 
     /**
-     * Sets style of a current selection
-     * @param {Object} [styles] Styles object
-     * @return {fabric.IText} thisArg
-     * @chainable
+     * Initialize text dimensions. Render all text on given context
+     * or on a offscreen canvas to get the text width with measureText.
+     * Updates this.width and this.height with the proper values.
+     * Does not return dimensions.
+     * @private
      */
-    setSelectionStyles: function(styles) {
-      if (this.selectionStart === this.selectionEnd) {
-        this._extendStyles(this.selectionStart, styles);
-      }
-      else {
-        for (var i = this.selectionStart; i < this.selectionEnd; i++) {
-          this._extendStyles(i, styles);
-        }
-      }
-      /* not included in _extendStyles to avoid clearing cache more than once */
-      this._forceClearCache = true;
-      return this;
+    initDimensions: function() {
+      this.isEditing && this.initDelayedCursor();
+      this.clearContextTop();
+      this.callSuper('initDimensions');
     },
 
     /**
      * @private
+     * @param {CanvasRenderingContext2D} ctx Context to render on
      */
-    _extendStyles: function(index, styles) {
-      var loc = this.get2DCursorLocation(index);
-
-      if (!this._getLineStyle(loc.lineIndex)) {
-        this._setLineStyle(loc.lineIndex, {});
-      }
-
-      if (!this._getStyleDeclaration(loc.lineIndex, loc.charIndex)) {
-        this._setStyleDeclaration(loc.lineIndex, loc.charIndex, {});
-      }
-
-      fabric.util.object.extend(this._getStyleDeclaration(loc.lineIndex, loc.charIndex), styles);
+    render: function(ctx) {
+      this.clearContextTop();
+      this.callSuper('render', ctx);
+      // clear the cursorOffsetCache, so we ensure to calculate once per renderCursor
+      // the correct position but not at every cursor animation.
+      this.cursorOffsetCache = { };
+      this.renderCursorOrSelection();
     },
 
     /**
@@ -312,111 +255,55 @@
      */
     _render: function(ctx) {
       this.callSuper('_render', ctx);
-      this.ctx = ctx;
-      this.isEditing && this.renderCursorOrSelection();
+    },
+
+    /**
+     * Prepare and clean the contextTop
+     */
+    clearContextTop: function(skipRestore) {
+      if (!this.isEditing) {
+        return;
+      }
+      if (this.canvas && this.canvas.contextTop) {
+        var ctx = this.canvas.contextTop, v = this.canvas.viewportTransform;
+        ctx.save();
+        ctx.transform(v[0], v[1], v[2], v[3], v[4], v[5]);
+        this.transform(ctx);
+        this.transformMatrix && ctx.transform.apply(ctx, this.transformMatrix);
+        this._clearTextArea(ctx);
+        skipRestore || ctx.restore();
+      }
     },
 
     /**
      * Renders cursor or selection (depending on what exists)
      */
     renderCursorOrSelection: function() {
-      if (!this.active) {
+      if (!this.isEditing || !this.canvas) {
         return;
       }
-
-      var chars = this.text.split(''),
-          boundaries, ctx;
-
-      if (this.canvas.contextTop) {
+      var boundaries = this._getCursorBoundaries(), ctx;
+      if (this.canvas && this.canvas.contextTop) {
         ctx = this.canvas.contextTop;
-        ctx.save();
-        ctx.transform.apply(ctx, this.canvas.viewportTransform);
-        this.transform(ctx);
-        this.transformMatrix && ctx.transform.apply(ctx, this.transformMatrix);
+        this.clearContextTop(true);
       }
       else {
-        ctx = this.ctx;
+        ctx = this.canvas.contextContainer;
         ctx.save();
       }
-
       if (this.selectionStart === this.selectionEnd) {
-        boundaries = this._getCursorBoundaries(chars, 'cursor');
         this.renderCursor(boundaries, ctx);
       }
       else {
-        boundaries = this._getCursorBoundaries(chars, 'selection');
-        this.renderSelection(chars, boundaries, ctx);
+        this.renderSelection(boundaries, ctx);
       }
-
       ctx.restore();
     },
 
-    /**
-     * Returns 2d representation (lineIndex and charIndex) of cursor (or selection start)
-     * @param {Number} [selectionStart] Optional index. When not given, current selectionStart is used.
-     */
-    get2DCursorLocation: function(selectionStart) {
-      if (typeof selectionStart === 'undefined') {
-        selectionStart = this.selectionStart;
-      }
-      var len = this._textLines.length;
-      for (var i = 0; i < len; i++) {
-        if (selectionStart <= this._textLines[i].length) {
-          return {
-            lineIndex: i,
-            charIndex: selectionStart
-          };
-        }
-        selectionStart -= this._textLines[i].length + 1;
-      }
-      return {
-        lineIndex: i - 1,
-        charIndex: this._textLines[i - 1].length < selectionStart ? this._textLines[i - 1].length : selectionStart
-      };
-    },
-
-    /**
-     * Returns complete style of char at the current cursor
-     * @param {Number} lineIndex Line index
-     * @param {Number} charIndex Char index
-     * @return {Object} Character style
-     */
-    getCurrentCharStyle: function(lineIndex, charIndex) {
-      var style = this._getStyleDeclaration(lineIndex, charIndex === 0 ? 0 : charIndex - 1);
-
-      return {
-        fontSize: style && style.fontSize || this.fontSize,
-        fill: style && style.fill || this.fill,
-        textBackgroundColor: style && style.textBackgroundColor || this.textBackgroundColor,
-        textDecoration: style && style.textDecoration || this.textDecoration,
-        fontFamily: style && style.fontFamily || this.fontFamily,
-        fontWeight: style && style.fontWeight || this.fontWeight,
-        fontStyle: style && style.fontStyle || this.fontStyle,
-        stroke: style && style.stroke || this.stroke,
-        strokeWidth: style && style.strokeWidth || this.strokeWidth
-      };
-    },
-
-    /**
-     * Returns fontSize of char at the current cursor
-     * @param {Number} lineIndex Line index
-     * @param {Number} charIndex Char index
-     * @return {Number} Character font size
-     */
-    getCurrentCharFontSize: function(lineIndex, charIndex) {
-      var style = this._getStyleDeclaration(lineIndex, charIndex === 0 ? 0 : charIndex - 1);
-      return style && style.fontSize ? style.fontSize : this.fontSize;
-    },
-
-    /**
-     * Returns color (fill) of char at the current cursor
-     * @param {Number} lineIndex Line index
-     * @param {Number} charIndex Char index
-     * @return {String} Character color (fill)
-     */
-    getCurrentCharColor: function(lineIndex, charIndex) {
-      var style = this._getStyleDeclaration(lineIndex, charIndex === 0 ? 0 : charIndex - 1);
-      return style && style.fill ? style.fill : this.cursorColor;
+    _clearTextArea: function(ctx) {
+      // we add 4 pixel, to be sure to do not leave any pixel out
+      var width = this.width + 4, height = this.height + 4;
+      ctx.clearRect(-width / 2, -height / 2, width, height);
     },
 
     /**
@@ -425,21 +312,23 @@
      * @param {Array} chars Array of characters
      * @param {String} typeOfBoundaries
      */
-    _getCursorBoundaries: function(chars, typeOfBoundaries) {
+    _getCursorBoundaries: function(position) {
 
       // left/top are left/top of entire text box
       // leftOffset/topOffset are offset from that left/top point of a text box
 
-      var left = Math.round(this._getLeftOffset()),
-          top = this._getTopOffset(),
+      if (typeof position === 'undefined') {
+        position = this.selectionStart;
+      }
 
-          offsets = this._getCursorBoundariesOffsets(
-                      chars, typeOfBoundaries);
+      var left = this._getLeftOffset(),
+          top = this._getTopOffset(),
+          offsets = this._getCursorBoundariesOffsets(position);
 
       return {
         left: left,
         top: top,
-        leftOffset: offsets.left + offsets.lineLeft,
+        leftOffset: offsets.left,
         topOffset: offsets.top
       };
     },
@@ -447,40 +336,33 @@
     /**
      * @private
      */
-    _getCursorBoundariesOffsets: function(chars, typeOfBoundaries) {
-
-      var lineLeftOffset = 0,
-
+    _getCursorBoundariesOffsets: function(position) {
+      if (this.cursorOffsetCache && 'top' in this.cursorOffsetCache) {
+        return this.cursorOffsetCache;
+      }
+      var lineLeftOffset,
           lineIndex = 0,
           charIndex = 0,
           topOffset = 0,
-          leftOffset = 0;
-
-      for (var i = 0; i < this.selectionStart; i++) {
-        if (chars[i] === '\n') {
-          leftOffset = 0;
-          topOffset += this._getHeightOfLine(this.ctx, lineIndex);
-
-          lineIndex++;
-          charIndex = 0;
-        }
-        else {
-          leftOffset += this._getWidthOfChar(this.ctx, chars[i], lineIndex, charIndex);
-          charIndex++;
-        }
-
-        lineLeftOffset = this._getLineLeftOffset(this._getLineWidth(this.ctx, lineIndex));
-      }
-      if (typeOfBoundaries === 'cursor') {
-        topOffset += (1 - this._fontSizeFraction) * this._getHeightOfLine(this.ctx, lineIndex) / this.lineHeight
-          - this.getCurrentCharFontSize(lineIndex, charIndex) * (1 - this._fontSizeFraction);
+          leftOffset = 0,
+          boundaries,
+          cursorPosition = this.get2DCursorLocation(position);
+      for (var i = 0; i < cursorPosition.lineIndex; i++) {
+        topOffset += this.getHeightOfLine(i);
       }
 
-      return {
+      lineLeftOffset = this._getLineLeftOffset(cursorPosition.lineIndex);
+      var bound = this.__charBounds[cursorPosition.lineIndex][cursorPosition.charIndex];
+      bound && (leftOffset = bound.left);
+      if (this.charSpacing !== 0 && charIndex === this._textLines[lineIndex].length) {
+        leftOffset -= this._getWidthOfCharSpacing();
+      }
+      boundaries = {
         top: topOffset,
-        left: leftOffset,
-        lineLeft: lineLeftOffset
+        left: lineLeftOffset + (leftOffset > 0 ? leftOffset : 0),
       };
+      this.cursorOffsetCache = boundaries;
+      return this.cursorOffsetCache;
     },
 
     /**
@@ -489,80 +371,125 @@
      * @param {CanvasRenderingContext2D} ctx transformed context to draw on
      */
     renderCursor: function(boundaries, ctx) {
-
       var cursorLocation = this.get2DCursorLocation(),
           lineIndex = cursorLocation.lineIndex,
-          charIndex = cursorLocation.charIndex,
-          charHeight = this.getCurrentCharFontSize(lineIndex, charIndex),
-          leftOffset = (lineIndex === 0 && charIndex === 0)
-                    ? this._getLineLeftOffset(this._getLineWidth(ctx, lineIndex))
-                    : boundaries.leftOffset;
+          charIndex = cursorLocation.charIndex > 0 ? cursorLocation.charIndex - 1 : 0,
+          charHeight = this.getValueOfPropertyAt(lineIndex, charIndex, 'fontSize'),
+          multiplier = this.scaleX * this.canvas.getZoom(),
+          cursorWidth = this.cursorWidth / multiplier,
+          topOffset = boundaries.topOffset;
 
-      ctx.fillStyle = this.getCurrentCharColor(lineIndex, charIndex);
+      topOffset += (1 - this._fontSizeFraction) * this.getHeightOfLine(lineIndex) / this.lineHeight
+        - charHeight * (1 - this._fontSizeFraction);
+
+      if (this.inCompositionMode) {
+        this.renderSelection(boundaries, ctx);
+      }
+
+      ctx.fillStyle = this.getValueOfPropertyAt(lineIndex, charIndex, 'fill');
       ctx.globalAlpha = this.__isMousedown ? 1 : this._currentCursorOpacity;
-
       ctx.fillRect(
-        boundaries.left + leftOffset,
-        boundaries.top + boundaries.topOffset,
-        this.cursorWidth / this.scaleX,
+        boundaries.left + boundaries.leftOffset - cursorWidth / 2,
+        topOffset + boundaries.top,
+        cursorWidth,
         charHeight);
-
     },
 
     /**
      * Renders text selection
-     * @param {Array} chars Array of characters
      * @param {Object} boundaries Object with left/top/leftOffset/topOffset
      * @param {CanvasRenderingContext2D} ctx transformed context to draw on
      */
-    renderSelection: function(chars, boundaries, ctx) {
+    renderSelection: function(boundaries, ctx) {
 
-      ctx.fillStyle = this.selectionColor;
-
-      var start = this.get2DCursorLocation(this.selectionStart),
-          end = this.get2DCursorLocation(this.selectionEnd),
+      var selectionStart = this.inCompositionMode ? this.hiddenTextarea.selectionStart : this.selectionStart,
+          selectionEnd = this.inCompositionMode ? this.hiddenTextarea.selectionEnd : this.selectionEnd,
+          isJustify = this.textAlign.indexOf('justify') !== -1,
+          start = this.get2DCursorLocation(selectionStart),
+          end = this.get2DCursorLocation(selectionEnd),
           startLine = start.lineIndex,
-          endLine = end.lineIndex;
+          endLine = end.lineIndex,
+          startChar = start.charIndex < 0 ? 0 : start.charIndex,
+          endChar = end.charIndex < 0 ? 0 : end.charIndex;
 
       for (var i = startLine; i <= endLine; i++) {
-        var lineOffset = this._getLineLeftOffset(this._getLineWidth(ctx, i)) || 0,
-            lineHeight = this._getHeightOfLine(this.ctx, i),
-            boxWidth = 0, line = this._textLines[i];
+        var lineOffset = this._getLineLeftOffset(i) || 0,
+            lineHeight = this.getHeightOfLine(i),
+            realLineHeight = 0, boxStart = 0, boxEnd = 0;
 
         if (i === startLine) {
-          for (var j = 0, len = line.length; j < len; j++) {
-            if (j >= start.charIndex && (i !== endLine || j < end.charIndex)) {
-              boxWidth += this._getWidthOfChar(ctx, line[j], i, j);
-            }
-            if (j < start.charIndex) {
-              lineOffset += this._getWidthOfChar(ctx, line[j], i, j);
-            }
-          }
+          boxStart = this.__charBounds[startLine][startChar].left;
         }
-        else if (i > startLine && i < endLine) {
-          boxWidth += this._getLineWidth(ctx, i) || 5;
+        if (i >= startLine && i < endLine) {
+          boxEnd = isJustify && !this.isEndOfWrapping(i) ? this.width : this.getLineWidth(i) || 5; // WTF is this 5?
         }
         else if (i === endLine) {
-          for (var j2 = 0, j2len = end.charIndex; j2 < j2len; j2++) {
-            boxWidth += this._getWidthOfChar(ctx, line[j2], i, j2);
+          if (endChar === 0) {
+            boxEnd = this.__charBounds[endLine][endChar].left;
+          }
+          else {
+            boxEnd = this.__charBounds[endLine][endChar - 1].left + this.__charBounds[endLine][endChar - 1].width;
           }
         }
+        realLineHeight = lineHeight;
+        if (this.lineHeight < 1 || (i === endLine && this.lineHeight > 1)) {
+          lineHeight /= this.lineHeight;
+        }
+        if (this.inCompositionMode) {
+          ctx.fillStyle = this.compositionColor || 'black';
+          ctx.fillRect(
+            boundaries.left + lineOffset + boxStart,
+            boundaries.top + boundaries.topOffset + lineHeight,
+            boxEnd - boxStart,
+            1);
+        }
+        else {
+          ctx.fillStyle = this.selectionColor;
+          ctx.fillRect(
+            boundaries.left + lineOffset + boxStart,
+            boundaries.top + boundaries.topOffset,
+            boxEnd - boxStart,
+            lineHeight);
+        }
 
-        ctx.fillRect(
-          boundaries.left + lineOffset,
-          boundaries.top + boundaries.topOffset,
-          boxWidth,
-          lineHeight);
 
-        boundaries.topOffset += lineHeight;
+        boundaries.topOffset += realLineHeight;
       }
     },
 
     /**
-     * @private
-     * @param {String} method
-     * @param {CanvasRenderingContext2D} ctx Context to render on
+     * High level function to know the height of the cursor.
+     * the currentChar is the one that precedes the cursor
+     * Returns fontSize of char at the current cursor
+     * @return {Number} Character font size
      */
+    getCurrentCharFontSize: function() {
+      var cp = this._getCurrentCharIndex();
+      return this.getValueOfPropertyAt(cp.l, cp.c, 'fontSize');
+    },
+
+    /**
+     * High level function to know the color of the cursor.
+     * the currentChar is the one that precedes the cursor
+     * Returns color (fill) of char at the current cursor
+     * @return {String} Character color (fill)
+     */
+    getCurrentCharColor: function() {
+      var cp = this._getCurrentCharIndex();
+      return this.getValueOfPropertyAt(cp.l, cp.c, 'fill');
+    },
+
+    /**
+     * Returns the cursor position for the getCurrent.. functions
+     * @private
+     */
+    _getCurrentCharIndex: function() {
+      var cursorPosition = this.get2DCursorLocation(this.selectionStart, true),
+          charIndex = cursorPosition.charIndex > 0 ? cursorPosition.charIndex - 1 : 0;
+      return { l: cursorPosition.lineIndex, c: charIndex };
+    }
+    
+    
     _renderChars: function(method, ctx, line, left, top, lineIndex, charOffset) {
 
       if (this.isEmptyStyles()) {
@@ -1140,9 +1067,17 @@
    * @static
    * @memberOf fabric.IText
    * @param {Object} object Object to create an instance from
-   * @return {fabric.IText} instance of fabric.IText
+   * @param {function} [callback] invoked with new instance as argument
    */
-  fabric.IText.fromObject = function(object) {
-    return new fabric.IText(object.text, clone(object));
+  fabric.IText.fromObject = function(object, callback) {
+    parseDecoration(object);
+    if (object.styles) {
+      for (var i in object.styles) {
+        for (var j in object.styles[i]) {
+          parseDecoration(object.styles[i][j]);
+        }
+      }
+    }
+    fabric.Object._fromObject('IText', object, callback, 'text');
   };
 })();

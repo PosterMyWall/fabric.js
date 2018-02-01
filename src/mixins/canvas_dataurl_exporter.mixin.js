@@ -1,52 +1,56 @@
-fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.StaticCanvas.prototype */ {
+(function () {
 
-  /**
-   * Exports canvas element to a dataurl image. Note that when multiplier is used, cropping is scaled appropriately
-   * @param {Object} [options] Options object
-   * @param {String} [options.format=png] The format of the output image. Either "jpeg" or "png"
-   * @param {Number} [options.quality=1] Quality level (0..1). Only used for jpeg.
-   * @param {Number} [options.multiplier=1] Multiplier to scale by
-   * @param {Number} [options.left] Cropping left offset. Introduced in v1.2.14
-   * @param {Number} [options.top] Cropping top offset. Introduced in v1.2.14
-   * @param {Number} [options.width] Cropping width. Introduced in v1.2.14
-   * @param {Number} [options.height] Cropping height. Introduced in v1.2.14
-   * @return {String} Returns a data: URL containing a representation of the object in the format specified by options.format
-   * @see {@link http://jsfiddle.net/fabricjs/NfZVb/|jsFiddle demo}
-   * @example <caption>Generate jpeg dataURL with lower quality</caption>
-   * var dataURL = canvas.toDataURL({
-   *   format: 'jpeg',
-   *   quality: 0.8
-   * });
-   * @example <caption>Generate cropped png dataURL (clipping of canvas)</caption>
-   * var dataURL = canvas.toDataURL({
-   *   format: 'png',
-   *   left: 100,
-   *   top: 100,
-   *   width: 200,
-   *   height: 200
-   * });
-   * @example <caption>Generate double scaled png dataURL</caption>
-   * var dataURL = canvas.toDataURL({
-   *   format: 'png',
-   *   multiplier: 2
-   * });
-   */
-  toDataURL: function (options) {
-    options || (options = { });
+  var supportQuality = fabric.StaticCanvas.supports('toDataURLWithQuality');
+
+  fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.StaticCanvas.prototype */ {
+
+    /**
+     * Exports canvas element to a dataurl image. Note that when multiplier is used, cropping is scaled appropriately
+     * @param {Object} [options] Options object
+     * @param {String} [options.format=png] The format of the output image. Either "jpeg" or "png"
+     * @param {Number} [options.quality=1] Quality level (0..1). Only used for jpeg.
+     * @param {Number} [options.multiplier=1] Multiplier to scale by
+     * @param {Number} [options.left] Cropping left offset. Introduced in v1.2.14
+     * @param {Number} [options.top] Cropping top offset. Introduced in v1.2.14
+     * @param {Number} [options.width] Cropping width. Introduced in v1.2.14
+     * @param {Number} [options.height] Cropping height. Introduced in v1.2.14
+     * @return {String} Returns a data: URL containing a representation of the object in the format specified by options.format
+     * @see {@link http://jsfiddle.net/fabricjs/NfZVb/|jsFiddle demo}
+     * @example <caption>Generate jpeg dataURL with lower quality</caption>
+     * var dataURL = canvas.toDataURL({
+     *   format: 'jpeg',
+     *   quality: 0.8
+     * });
+     * @example <caption>Generate cropped png dataURL (clipping of canvas)</caption>
+     * var dataURL = canvas.toDataURL({
+     *   format: 'png',
+     *   left: 100,
+     *   top: 100,
+     *   width: 200,
+     *   height: 200
+     * });
+     * @example <caption>Generate double scaled png dataURL</caption>
+     * var dataURL = canvas.toDataURL({
+     *   format: 'png',
+     *   multiplier: 2
+     * });
+     */
+    toDataURL: function (options) {
+      options || (options = { });
 
     var format = options.format || 'png',
         quality = options.quality || 1,
         multiplier = options.multiplier || 1,
         clear = options.clear || false,
         cropping = {
-          left: options.left,
-          top: options.top,
-          width: options.width,
-          height: options.height
+          left: options.left || 0,
+          top: options.top || 0,
+          width: options.width || 0,
+          height: options.height || 0,
         };
 
     if (multiplier !== 1) {
-      return this.__toDataURLWithMultiplier(format, quality, cropping, multiplier, clear, options.scaleShadow);
+      return this.__toDataURLWithMultiplier(format, quality, cropping, multiplier);
     }
     else {
       return this.__toDataURL(format, quality, cropping);
@@ -108,7 +112,7 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
   /**
    * @private
    */
-  __toDataURLWithMultiplier: function(format, quality, cropping, multiplier, clear, scaleShadow) {
+  __toDataURLWithMultiplier: function(format, quality, cropping, multiplier) {
 
     var origWidth = this.getWidth(),
         origHeight = this.getHeight(),
@@ -121,24 +125,6 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
 
     if (multiplier > 1) {
       this.setWidth(scaledWidth).setHeight(scaledHeight);
-    }
-
-    if (clear) {
-      // Store the current transformation matrix
-      ctx.save();
-
-      // Use the identity matrix while clearing the canvas
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, scaledWidth, scaledHeight);
-
-      // Restore the transform
-      ctx.restore();
-    }
-
-    // temporary fix for the shadow bug while taking the snapshot
-    // remove the code related to scaleShadow before updating the fabricjs with latest build on github
-    if(scaleShadow) {
-      ctx.__multiplier = multiplier;
     }
     ctx.scale(multiplier, multiplier);
 
@@ -176,9 +162,6 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
     this.width = origWidth;
     this.height = origHeight;
 
-    if(scaleShadow) {
-      ctx.__multiplier = null;
-    }
     ctx.scale(1 / multiplier,  1 / multiplier);
     this.setWidth(origWidth).setHeight(origHeight);
 
@@ -218,7 +201,7 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
     group.origHasControls = group.hasControls;
     group.origBorderColor = group.borderColor;
 
-    group.hasControls = false;
+    group.hasControls = true;
     group.borderColor = 'rgba(0,0,0,0)';
 
     group.forEachObject(function(o) {
@@ -234,7 +217,6 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
     group.hideControls = group.origHideControls;
     group.borderColor = group.origBorderColor;
 
-    group.hasControls = true;
     group.forEachObject(function(o) {
       o.borderColor = o.origBorderColor;
       delete o.origBorderColor;

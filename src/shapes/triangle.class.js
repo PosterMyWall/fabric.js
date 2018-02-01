@@ -26,18 +26,18 @@
     type: 'triangle',
 
     /**
-     * Constructor
-     * @param {Object} [options] Options object
-     * @return {Object} thisArg
+     * Width is set to 100 to compensate the old initialize code that was setting it to 100
+     * @type Number
+     * @default
      */
-    initialize: function(options) {
-      options = options || { };
+    width: 100,
 
-      this.callSuper('initialize', options);
-
-      this.set('width', options.width || 100)
-          .set('height', options.height || 100);
-    },
+    /**
+     * Height is set to 100 to compensate the old initialize code that was setting it to 100
+     * @type Number
+     * @default
+     */
+    height: 100,
 
     /**
      * @private
@@ -53,8 +53,7 @@
       ctx.lineTo(widthBy2, heightBy2);
       ctx.closePath();
 
-      this._renderFill(ctx);
-      this._renderStroke(ctx);
+      this._renderPaintInOrder(ctx);
     },
 
     /**
@@ -87,38 +86,31 @@
             '0 ' + -heightBy2,
             widthBy2 + ' ' + heightBy2
           ]
-          .join(',');
+            .join(',');
 
       markup.push(
-        '<polygon ',
-          'points="', points,
-          '" style="', this.getSvgStyles(),
-          '" transform="', this.getSvgTransform(),
-        '"/>'
+        '<polygon ', this.getSvgId(),
+        'points="', points,
+        '" style="', this.getSvgStyles(),
+        '" transform="', this.getSvgTransform(), '"',
+        this.addPaintOrder(),
+        '/>'
       );
 
       return reviver ? reviver(markup.join('')) : markup.join('');
     },
     /* _TO_SVG_END_ */
-
-    /**
-     * Returns complexity of an instance
-     * @return {Number} complexity of this instance
-     */
-    complexity: function() {
-      return 1;
-    }
   });
 
   /**
-   * Returns fabric.Triangle instance from an object representation
+   * Returns {@link fabric.Triangle} instance from an object representation
    * @static
    * @memberOf fabric.Triangle
    * @param {Object} object Object to create an instance from
-   * @return {Object} instance of Canvas.Triangle
+   * @param {function} [callback] invoked with new instance as first argument
    */
-  fabric.Triangle.fromObject = function(object) {
-    return new fabric.Triangle(object);
+  fabric.Triangle.fromObject = function(object, callback) {
+    return fabric.Object._fromObject('Triangle', object, callback);
   };
 
 })(typeof exports !== 'undefined' ? exports : this);

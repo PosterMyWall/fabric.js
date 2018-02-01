@@ -25,25 +25,34 @@
 
   fabric.Intersection.prototype = /** @lends fabric.Intersection.prototype */ {
 
+    constructor: Intersection,
+
     /**
      * Appends a point to intersection
      * @param {fabric.Point} point
+     * @return {fabric.Intersection} thisArg
+     * @chainable
      */
     appendPoint: function (point) {
       this.points.push(point);
+      return this;
     },
 
     /**
      * Appends points to intersection
      * @param {Array} points
+     * @return {fabric.Intersection} thisArg
+     * @chainable
      */
     appendPoints: function (points) {
       this.points = this.points.concat(points);
+      return this;
     }
   };
 
   /**
    * Checks if one line intersects another
+   * TODO: rename in intersectSegmentSegment
    * @static
    * @param {fabric.Point} a1
    * @param {fabric.Point} a2
@@ -61,7 +70,7 @@
           ub = ubT / uB;
       if (0 <= ua && ua <= 1 && 0 <= ub && ub <= 1) {
         result = new Intersection('Intersection');
-        result.points.push(new fabric.Point(a1.x + ua * (a2.x - a1.x), a1.y + ua * (a2.y - a1.y)));
+        result.appendPoint(new fabric.Point(a1.x + ua * (a2.x - a1.x), a1.y + ua * (a2.y - a1.y)));
       }
       else {
         result = new Intersection();
@@ -80,6 +89,8 @@
 
   /**
    * Checks if line intersects polygon
+   * TODO: rename in intersectSegmentPolygon
+   * fix detection of coincident
    * @static
    * @param {fabric.Point} a1
    * @param {fabric.Point} a2
@@ -88,12 +99,13 @@
    */
   fabric.Intersection.intersectLinePolygon = function(a1, a2, points) {
     var result = new Intersection(),
-        length = points.length;
+        length = points.length,
+        b1, b2, inter, i;
 
-    for (var i = 0; i < length; i++) {
-      var b1 = points[i],
-          b2 = points[(i + 1) % length],
-          inter = Intersection.intersectLineLine(a1, a2, b1, b2);
+    for (i = 0; i < length; i++) {
+      b1 = points[i];
+      b2 = points[(i + 1) % length];
+      inter = Intersection.intersectLineLine(a1, a2, b1, b2);
 
       result.appendPoints(inter.points);
     }
@@ -112,9 +124,9 @@
    */
   fabric.Intersection.intersectPolygonPolygon = function (points1, points2) {
     var result = new Intersection(),
-        length = points1.length;
+        length = points1.length, i;
 
-    for (var i = 0; i < length; i++) {
+    for (i = 0; i < length; i++) {
       var a1 = points1[i],
           a2 = points1[(i + 1) % length],
           inter = Intersection.intersectLinePolygon(a1, a2, points2);
@@ -131,8 +143,8 @@
    * Checks if polygon intersects rectangle
    * @static
    * @param {Array} points
-   * @param {Number} r1
-   * @param {Number} r2
+   * @param {fabric.Point} r1
+   * @param {fabric.Point} r2
    * @return {fabric.Intersection}
    */
   fabric.Intersection.intersectPolygonRectangle = function (points, r1, r2) {

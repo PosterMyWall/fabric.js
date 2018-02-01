@@ -1,15 +1,19 @@
-var testrunner = require('qunit');
+var testrunner = require('node-qunit');
 
 testrunner.options.log.summary = true;
 testrunner.options.log.tests = false;
 testrunner.options.log.assertions = false;
+testrunner.options.log.coverage = true;
 
 testrunner.options.coverage = true;
+testrunner.options.maxBlockDuration = 120000;
 
 testrunner.run({
     deps: "./test/fixtures/test_script.js",
     code: "./dist/fabric.js",
     tests: [
+      './test/unit/activeselection.js',
+      './test/unit/animation.js',
       './test/unit/rect.js',
       './test/unit/ellipse.js',
       './test/unit/color.js',
@@ -18,11 +22,11 @@ testrunner.run({
       './test/unit/polyline.js',
       './test/unit/polygon.js',
       './test/unit/path.js',
-      './test/unit/path_group.js',
       './test/unit/observable.js',
       './test/unit/object.js',
       './test/unit/text.js',
       './test/unit/util.js',
+      './test/unit/brushes.js',
       './test/unit/image.js',
       './test/unit/image_filters.js',
       './test/unit/group.js',
@@ -33,9 +37,17 @@ testrunner.run({
       './test/unit/pattern.js',
       './test/unit/shadow.js',
       './test/unit/object_interactivity.js',
-      './test/unit/object_origin.js',      
-      './test/unit/itext.js'
-    ]
+      './test/unit/object_geometry.js',
+      './test/unit/object_origin.js',
+      './test/unit/itext.js',
+      './test/unit/itext_click_behaviour.js',
+      './test/unit/itext_key_behaviour.js',
+      './test/unit/collection.js',
+      './test/unit/point.js',
+      './test/unit/intersection.js',
+      './test/unit/stateful.js'
+    ],
+    // tests: ['./test/unit/pattern.js'],
 }, function(err, report) {
   if (err) {
     console.log(err);

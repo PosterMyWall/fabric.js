@@ -10,9 +10,6 @@
     return;
   }
 
-  var stateProperties = fabric.Object.prototype.stateProperties.concat();
-  stateProperties.push('rx', 'ry', 'x', 'y');
-
   /**
    * Rectangle class
    * @class fabric.Rect
@@ -27,7 +24,7 @@
      * as well as for history (undo/redo) purposes
      * @type Array
      */
-    stateProperties: stateProperties,
+    stateProperties: fabric.Object.prototype.stateProperties.concat('rx', 'ry'),
 
     /**
      * Type of an object
@@ -50,11 +47,7 @@
      */
     ry:   0,
 
-    /**
-     * Used to specify dash pattern for stroke on this object
-     * @type Array
-     */
-    strokeDashArray: null,
+    cacheProperties: fabric.Object.prototype.cacheProperties.concat('rx', 'ry'),
 
     /**
      * Constructor
@@ -62,11 +55,8 @@
      * @return {Object} thisArg
      */
     initialize: function(options) {
-      options = options || { };
-
       this.callSuper('initialize', options);
       this._initRxRy();
-
     },
 
     /**
@@ -86,11 +76,11 @@
      * @private
      * @param {CanvasRenderingContext2D} ctx Context to render on
      */
-    _render: function(ctx, noTransform) {
+    _render: function(ctx) {
 
       // optimize 1x1 case (used in spray brush)
       if (this.width === 1 && this.height === 1) {
-        ctx.fillRect(0, 0, 1, 1);
+        ctx.fillRect(-0.5, -0.5, 1, 1);
         return;
       }
 
@@ -98,11 +88,11 @@
           ry = this.ry ? Math.min(this.ry, this.height / 2) : 0,
           w = this.width,
           h = this.height,
-          x = noTransform ? this.left : -this.width / 2,
-          y = noTransform ? this.top : -this.height / 2,
+          x = -this.width / 2,
+          y = -this.height / 2,
           isRounded = rx !== 0 || ry !== 0,
-          k = 1 - 0.5522847498 /* "magic number" for bezier approximations of arcs (http://itc.ktu.lt/itc354/Riskus354.pdf) */;
-
+          /* "magic number" for bezier approximations of arcs (http://itc.ktu.lt/itc354/Riskus354.pdf) */
+          k = 1 - 0.5522847498;
       ctx.beginPath();
 
       ctx.moveTo(x + rx, y);
@@ -121,8 +111,7 @@
 
       ctx.closePath();
 
-      this._renderFill(ctx);
-      this._renderStroke(ctx);
+      this._renderPaintInOrder(ctx);
     },
 
     /**
@@ -149,14 +138,7 @@
      * @return {Object} object representation of an instance
      */
     toObject: function(propertiesToInclude) {
-      var object = extend(this.callSuper('toObject', propertiesToInclude), {
-        rx: this.get('rx') || 0,
-        ry: this.get('ry') || 0
-      });
-      if (!this.includeDefaultValues) {
-        this._removeDefaultValues(object);
-      }
-      return object;
+      return this.callSuper('toObject', ['rx', 'ry'].concat(propertiesToInclude));
     },
 
     /* _TO_SVG_START_ */
@@ -166,32 +148,21 @@
      * @return {String} svg representation of an instance
      */
     toSVG: function(reviver) {
-      var markup = this._createBaseSVGMarkup(), x = this.left, y = this.top;
-      if (!(this.group && this.group.type === 'path-group')) {
-        x = -this.width / 2;
-        y = -this.height / 2;
-      }
+      var markup = this._createBaseSVGMarkup(), x = -this.width / 2, y = -this.height / 2;
       markup.push(
-        '<rect ',
-          'x="', x, '" y="', y,
-          '" rx="', this.get('rx'), '" ry="', this.get('ry'),
-          '" width="', this.width, '" height="', this.height,
-          '" style="', this.getSvgStyles(),
-          '" transform="', this.getSvgTransform(),
-          this.getSvgTransformMatrix(),
-        '"/>\n');
+        '<rect ', this.getSvgId(),
+        'x="', x, '" y="', y,
+        '" rx="', this.get('rx'), '" ry="', this.get('ry'),
+        '" width="', this.width, '" height="', this.height,
+        '" style="', this.getSvgStyles(),
+        '" transform="', this.getSvgTransform(),
+        this.getSvgTransformMatrix(), '"',
+        this.addPaintOrder(),
+        '/>\n');
 
       return reviver ? reviver(markup.join('')) : markup.join('');
     },
     /* _TO_SVG_END_ */
-
-    /**
-     * Returns complexity of an instance
-     * @return {Number} complexity
-     */
-    complexity: function() {
-      return 1;
-    }
   });
 
   /* _FROM_SVG_START_ */
@@ -208,12 +179,12 @@
    * @static
    * @memberOf fabric.Rect
    * @param {SVGElement} element Element to parse
+   * @param {Function} callback callback function invoked after parsing
    * @param {Object} [options] Options object
-   * @return {fabric.Rect} Instance of fabric.Rect
    */
-  fabric.Rect.fromElement = function(element, options) {
+  fabric.Rect.fromElement = function(element, callback, options) {
     if (!element) {
-      return null;
+      return callback(null);
     }
     options = options || { };
 
@@ -222,8 +193,8 @@
     parsedAttributes.left = parsedAttributes.left || 0;
     parsedAttributes.top  = parsedAttributes.top  || 0;
     var rect = new fabric.Rect(extend((options ? fabric.util.object.clone(options) : { }), parsedAttributes));
-    rect.visible = rect.width > 0 && rect.height > 0;
-    return rect;
+    rect.visible = rect.visible && rect.width > 0 && rect.height > 0;
+    callback(rect);
   };
   /* _FROM_SVG_END_ */
 
@@ -232,10 +203,10 @@
    * @static
    * @memberOf fabric.Rect
    * @param {Object} object Object to create an instance from
-   * @return {Object} instance of fabric.Rect
+   * @param {Function} [callback] Callback to invoke when an fabric.Rect instance is created
    */
-  fabric.Rect.fromObject = function(object) {
-    return new fabric.Rect(object);
+  fabric.Rect.fromObject = function(object, callback) {
+    return fabric.Object._fromObject('Rect', object, callback);
   };
 
 })(typeof exports !== 'undefined' ? exports : this);

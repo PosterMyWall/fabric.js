@@ -5,16 +5,27 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
    */
   initHiddenTextarea: function() {
     this.hiddenTextarea = fabric.document.createElement('textarea');
-
     this.hiddenTextarea.setAttribute('autocapitalize', 'off');
-    this.hiddenTextarea.style.cssText = 'white-space: nowrap; position: fixed; bottom: 20px; left: 0px; opacity: 0;'
-                                        + ' width: 0px; height: 0px; z-index: -999;';
+    this.hiddenTextarea.setAttribute('autocorrect', 'off');
+    this.hiddenTextarea.setAttribute('autocomplete', 'off');
+    this.hiddenTextarea.setAttribute('spellcheck', 'false');
+    this.hiddenTextarea.setAttribute('data-fabric-hiddentextarea', '');
+    this.hiddenTextarea.setAttribute('wrap', 'off');
+    var style = this._calcTextareaPosition();
+    this.hiddenTextarea.style.cssText = 'white-space: nowrap; position: absolute; top: ' + style.top +
+    '; left: ' + style.left + '; z-index: -999; opacity: 0; width: 1px; height: 1px; font-size: 1px;' +
+    ' line-height: 1px; paddingｰtop: ' + style.fontSize + ';';
     fabric.document.body.appendChild(this.hiddenTextarea);
 
     fabric.util.addListener(this.hiddenTextarea, 'keydown', this.onKeyDown.bind(this));
+    fabric.util.addListener(this.hiddenTextarea, 'keyup', this.onKeyUp.bind(this));
     fabric.util.addListener(this.hiddenTextarea, 'input', this.onInput.bind(this));
     fabric.util.addListener(this.hiddenTextarea, 'copy', this.copy.bind(this));
+    fabric.util.addListener(this.hiddenTextarea, 'cut', this.copy.bind(this));
     fabric.util.addListener(this.hiddenTextarea, 'paste', this.paste.bind(this));
+    fabric.util.addListener(this.hiddenTextarea, 'compositionstart', this.onCompositionStart.bind(this));
+    fabric.util.addListener(this.hiddenTextarea, 'compositionupdate', this.onCompositionUpdate.bind(this));
+    fabric.util.addListener(this.hiddenTextarea, 'compositionend', this.onCompositionEnd.bind(this));
 
     if (!this._clickHandlerInitialized && this.canvas) {
       fabric.util.addListener(this.canvas.upperCanvasEl, 'click', this.onClick.bind(this));
@@ -23,13 +34,19 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
   },
 
   /**
-   * @private
+   * For functionalities on keyDown
+   * Map a special key to a function of the instance/prototype
+   * If you need different behaviour for ESC or TAB or arrows, you have to change
+   * this map setting the name of a function that you build on the fabric.Itext or
+   * your prototype.
+   * the map change will affect all Instances unless you need for only some text Instances
+   * in that case you have to clone this object and assign your Instance.
+   * this.keysMap = fabric.util.object.clone(this.keysMap);
+   * The function must be in fabric.Itext.prototype.myFunction And will receive event as args[0]
    */
-  _keysMap: {
-    8:  'removeChars',
+  keysMap: {
     9:  'exitEditing',
     27: 'exitEditing',
-    13: 'insertNewline',
     33: 'moveCursorUp',
     34: 'moveCursorDown',
     35: 'moveCursorRight',
@@ -38,15 +55,21 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
     38: 'moveCursorUp',
     39: 'moveCursorRight',
     40: 'moveCursorDown',
-    46: 'forwardDelete'
   },
 
   /**
-   * @private
+   * For functionalities on keyUp + ctrl || cmd
    */
-  _ctrlKeysMap: {
-    65: 'selectAll',
+  ctrlKeysMapUp: {
+    67: 'copy',
     88: 'cut'
+  },
+
+  /**
+   * For functionalities on keyDown + ctrl || cmd
+   */
+  ctrlKeysMapDown: {
+    65: 'selectAll'
   },
 
   onClick: function() {
@@ -59,21 +82,50 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
    * @param {Event} e Event object
    */
   onKeyDown: function(e) {
-    if (!this.isEditing) {
+    if (!this.isEditing || this.inCompositionMode) {
       return;
     }
-    if (e.keyCode in this._keysMap) {
-      this[this._keysMap[e.keyCode]](e);
+    if (e.keyCode in this.keysMap) {
+      this[this.keysMap[e.keyCode]](e);
     }
-    else if ((e.keyCode in this._ctrlKeysMap) && (e.ctrlKey || e.metaKey)) {
-      this[this._ctrlKeysMap[e.keyCode]](e);
+    else if ((e.keyCode in this.ctrlKeysMapDown) && (e.ctrlKey || e.metaKey)) {
+      this[this.ctrlKeysMapDown[e.keyCode]](e);
     }
     else {
       return;
     }
     e.stopImmediatePropagation();
     e.preventDefault();
-    this.canvas && this.canvas.renderAll();
+    if (e.keyCode >= 33 && e.keyCode <= 40) {
+      // if i press an arrow key just update selection
+      this.clearContextTop();
+      this.renderCursorOrSelection();
+    }
+    else {
+      this.canvas && this.canvas.requestRenderAll();
+    }
+  },
+
+  /**
+   * Handles keyup event
+   * We handle KeyUp because ie11 and edge have difficulties copy/pasting
+   * if a copy/cut event fired, keyup is dismissed
+   * @param {Event} e Event object
+   */
+  onKeyUp: function(e) {
+    if (!this.isEditing || this._copyDone || this.inCompositionMode) {
+      this._copyDone = false;
+      return;
+    }
+    if ((e.keyCode in this.ctrlKeysMapUp) && (e.ctrlKey || e.metaKey)) {
+      this[this.ctrlKeysMapUp[e.keyCode]](e);
+    }
+    else {
+      return;
+    }
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    this.canvas && this.canvas.requestRenderAll();
   },
 
   /**
@@ -81,89 +133,120 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
    * @param {Event} e Event object
    */
   onInput: function(e) {
+    var fromPaste = this.fromPaste;
+    this.fromPaste = false;
+    e && e.stopPropagation();
     if (!this.isEditing) {
       return;
     }
-    var offset = this.selectionStart || 0,
-        offsetEnd = this.selectionEnd || 0,
-        textLength = this.text.length,
-        newTextLength = this.hiddenTextarea.value.length,
-        diff = newTextLength - textLength + offsetEnd - offset,
-        charsToInsert = this.hiddenTextarea.value.slice(offset, offset + diff);
-    this.insertChars(charsToInsert);
-    e.stopPropagation();
+    // decisions about style changes.
+    var nextText = this._splitTextIntoLines(this.hiddenTextarea.value).graphemeText,
+        charCount = this._text.length,
+        nextCharCount = nextText.length,
+        removedText, insertedText,
+        charDiff = nextCharCount - charCount;
+    if (this.hiddenTextarea.value === '') {
+      this.styles = { };
+      this.updateFromTextArea();
+      this.fire('changed');
+      if (this.canvas) {
+        this.canvas.fire('text:changed', { target: this });
+        this.canvas.requestRenderAll();
+      }
+      return;
+    }
+
+    var textareaSelection = this.fromStringToGraphemeSelection(
+      this.hiddenTextarea.selectionStart,
+      this.hiddenTextarea.selectionEnd,
+      this.hiddenTextarea.value
+    );
+    var backDelete = this.selectionStart > textareaSelection.selectionStart;
+
+    if (this.selectionStart !== this.selectionEnd) {
+      removedText = this._text.slice(this.selectionStart, this.selectionEnd);
+      charDiff += this.selectionEnd - this.selectionStart;
+    }
+    else if (nextCharCount < charCount) {
+      if (backDelete) {
+        removedText = this._text.slice(this.selectionEnd + charDiff, this.selectionEnd);
+      }
+      else {
+        removedText = this._text.slice(this.selectionStart, this.selectionStart - charDiff);
+      }
+    }
+    insertedText = nextText.slice(textareaSelection.selectionEnd - charDiff, textareaSelection.selectionEnd);
+    if (removedText && removedText.length) {
+      if (this.selectionStart !== this.selectionEnd) {
+        this.removeStyleFromTo(this.selectionStart, this.selectionEnd);
+      }
+      else if (backDelete) {
+        // detect differencies between forwardDelete and backDelete
+        this.removeStyleFromTo(this.selectionEnd - removedText.length, this.selectionEnd);
+      }
+      else {
+        this.removeStyleFromTo(this.selectionEnd, this.selectionEnd + removedText.length);
+      }
+    }
+    if (insertedText.length) {
+      if (fromPaste && insertedText.join('') === fabric.copiedText) {
+        this.insertNewStyleBlock(insertedText, this.selectionStart, fabric.copiedTextStyle);
+      }
+      else {
+        this.insertNewStyleBlock(insertedText, this.selectionStart);
+      }
+    }
+    this.updateFromTextArea();
+    this.fire('changed');
+    if (this.canvas) {
+      this.canvas.fire('text:changed', { target: this });
+      this.canvas.requestRenderAll();
+    }
+  },
+  /**
+   * Composition start
+   */
+  onCompositionStart: function() {
+    this.inCompositionMode = true;
   },
 
   /**
-   * Forward delete
+   * Composition end
    */
-  forwardDelete: function(e) {
-    if (this.selectionStart === this.selectionEnd) {
-      if (this.selectionStart === this.text.length) {
-        return;
-      }
-      this.moveCursorRight(e);
-    }
-    this.removeChars(e);
+  onCompositionEnd: function() {
+    this.inCompositionMode = false;
+  },
+
+  // /**
+  //  * Composition update
+  //  */
+  onCompositionUpdate: function(e) {
+    this.compositionStart = e.target.selectionStart;
+    this.compositionEnd = e.target.selectionEnd;
+    this.updateTextareaPosition();
   },
 
   /**
    * Copies selected text
    * @param {Event} e Event object
    */
-  copy: function(e) {
-    var selectedText = this.getSelectedText(),
-        clipboardData = this._getClipboardData(e);
-
-    // Check for backward compatibility with old browsers
-    if (clipboardData) {
-      clipboardData.setData('text', selectedText);
+  copy: function() {
+    if (this.selectionStart === this.selectionEnd) {
+      //do not cut-copy if no selection
+      return;
     }
 
-    fabric.copiedText = selectedText;
-    fabric.copiedTextStyle = this.getSelectionStyles(
-                          this.selectionStart,
-                          this.selectionEnd);
+    fabric.copiedText = this.getSelectedText();
+    fabric.copiedTextStyle = this.getSelectionStyles(this.selectionStart, this.selectionEnd, true);
+    this._copyDone = true;
   },
 
   /**
    * Pastes text
    * @param {Event} e Event object
    */
-  paste: function(e) {
-    var copiedText = null,
-        clipboardData = this._getClipboardData(e),
-        useCopiedStyle = true;
-
-    // Check for backward compatibility with old browsers
-    if (clipboardData) {
-      copiedText = clipboardData.getData('text').replace(/\r/g, '');
-      if (!fabric.copiedTextStyle || fabric.copiedText !== copiedText) {
-        useCopiedStyle = false;
-      }
-    }
-    else {
-      copiedText = fabric.copiedText;
-    }
-
-    if (copiedText) {
-      this.insertChars(copiedText, useCopiedStyle);
-    }
-    e.stopImmediatePropagation();
-    e.preventDefault();
-  },
-
-  /**
-   * Cuts text
-   * @param {Event} e Event object
-   */
-  cut: function(e) {
-    if (this.selectionStart === this.selectionEnd) {
-      return;
-    }
-
-    this.copy();
-    this.removeChars(e);
+  paste: function() {
+    this.fromPaste = true;
   },
 
   /**
@@ -172,7 +255,24 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
    * @return {Object} Clipboard data object
    */
   _getClipboardData: function(e) {
-    return e && (e.clipboardData || fabric.window.clipboardData);
+    return (e && e.clipboardData) || fabric.window.clipboardData;
+  },
+
+  /**
+   * Finds the width in pixels before the cursor on the same line
+   * @private
+   * @param {Number} lineIndex
+   * @param {Number} charIndex
+   * @return {Number} widthBeforeCursor width before cursor
+   */
+  _getWidthBeforeCursor: function(lineIndex, charIndex) {
+    var widthBeforeCursor = this._getLineLeftOffset(lineIndex), bound;
+
+    if (charIndex > 0) {
+      bound = this.__charBounds[lineIndex][charIndex - 1];
+      widthBeforeCursor += bound.left + bound.width;
+    }
+    return widthBeforeCursor;
   },
 
   /**
@@ -182,136 +282,34 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
    * @return {Number}
    */
   getDownCursorOffset: function(e, isRight) {
-    var selectionProp = isRight ? this.selectionEnd : this.selectionStart,
+    var selectionProp = this._getSelectionForOffset(e, isRight),
         cursorLocation = this.get2DCursorLocation(selectionProp),
-        _char, lineLeftOffset, lineIndex = cursorLocation.lineIndex,
-        textOnSameLineBeforeCursor = this._textLines[lineIndex].slice(0, cursorLocation.charIndex),
-        textOnSameLineAfterCursor = this._textLines[lineIndex].slice(cursorLocation.charIndex),
-        textOnNextLine = this._textLines[lineIndex + 1] || '';
-
+        lineIndex = cursorLocation.lineIndex;
     // if on last line, down cursor goes to end of line
     if (lineIndex === this._textLines.length - 1 || e.metaKey || e.keyCode === 34) {
-
       // move to the end of a text
-      return this.text.length - selectionProp;
+      return this._text.length - selectionProp;
     }
-
-    var widthOfSameLineBeforeCursor = this._getLineWidth(this.ctx, lineIndex);
-    lineLeftOffset = this._getLineLeftOffset(widthOfSameLineBeforeCursor);
-
-    var widthOfCharsOnSameLineBeforeCursor = lineLeftOffset;
-
-    for (var i = 0, len = textOnSameLineBeforeCursor.length; i < len; i++) {
-      _char = textOnSameLineBeforeCursor[i];
-      widthOfCharsOnSameLineBeforeCursor += this._getWidthOfChar(this.ctx, _char, lineIndex, i);
-    }
-
-    var indexOnNextLine = this._getIndexOnNextLine(
-      cursorLocation, textOnNextLine, widthOfCharsOnSameLineBeforeCursor);
-
-    return textOnSameLineAfterCursor.length + 1 + indexOnNextLine;
-  },
-
-  /**
-   * @private
-   */
-  _getIndexOnNextLine: function(cursorLocation, textOnNextLine, widthOfCharsOnSameLineBeforeCursor) {
-    var lineIndex = cursorLocation.lineIndex + 1,
-        widthOfNextLine = this._getLineWidth(this.ctx, lineIndex),
-        lineLeftOffset = this._getLineLeftOffset(widthOfNextLine),
-        widthOfCharsOnNextLine = lineLeftOffset,
-        indexOnNextLine = 0,
-        foundMatch;
-
-    for (var j = 0, jlen = textOnNextLine.length; j < jlen; j++) {
-
-      var _char = textOnNextLine[j],
-          widthOfChar = this._getWidthOfChar(this.ctx, _char, lineIndex, j);
-
-      widthOfCharsOnNextLine += widthOfChar;
-
-      if (widthOfCharsOnNextLine > widthOfCharsOnSameLineBeforeCursor) {
-
-        foundMatch = true;
-
-        var leftEdge = widthOfCharsOnNextLine - widthOfChar,
-            rightEdge = widthOfCharsOnNextLine,
-            offsetFromLeftEdge = Math.abs(leftEdge - widthOfCharsOnSameLineBeforeCursor),
-            offsetFromRightEdge = Math.abs(rightEdge - widthOfCharsOnSameLineBeforeCursor);
-
-        indexOnNextLine = offsetFromRightEdge < offsetFromLeftEdge ? j + 1 : j;
-
-        break;
-      }
-    }
-
-    // reached end
-    if (!foundMatch) {
-      indexOnNextLine = textOnNextLine.length;
-    }
-
-    return indexOnNextLine;
-  },
-
-  /**
-   * Moves cursor down
-   * @param {Event} e Event object
-   */
-  moveCursorDown: function(e) {
-    this.abortCursorAnimation();
-    this._currentCursorOpacity = 1;
-
-    var offset = this.getDownCursorOffset(e, this._selectionDirection === 'right');
-
-    if (e.shiftKey) {
-      this.moveCursorDownWithShift(offset);
-    }
-    else {
-      this.moveCursorDownWithoutShift(offset);
-    }
-
-    this.initDelayedCursor();
-  },
-
-  /**
-   * Moves cursor down without keeping selection
-   * @param {Number} offset
-   */
-  moveCursorDownWithoutShift: function(offset) {
-    this._selectionDirection = 'right';
-    this.setSelectionStart(this.selectionStart + offset);
-    this.setSelectionEnd(this.selectionStart);
+    var charIndex = cursorLocation.charIndex,
+        widthBeforeCursor = this._getWidthBeforeCursor(lineIndex, charIndex),
+        indexOnOtherLine = this._getIndexOnLine(lineIndex + 1, widthBeforeCursor),
+        textAfterCursor = this._textLines[lineIndex].slice(charIndex);
+    return textAfterCursor.length + indexOnOtherLine + 2;
   },
 
   /**
    * private
+   * Helps finding if the offset should be counted from Start or End
+   * @param {Event} e Event object
+   * @param {Boolean} isRight
+   * @return {Number}
    */
-  swapSelectionPoints: function() {
-    var swapSel = this.selectionEnd;
-    this.setSelectionEnd(this.selectionStart);
-    this.setSelectionStart(swapSel);
-  },
-
-  /**
-   * Moves cursor down while keeping selection
-   * @param {Number} offset
-   */
-  moveCursorDownWithShift: function(offset) {
-    if (this.selectionEnd === this.selectionStart) {
-      this._selectionDirection = 'right';
-    }
-    if (this._selectionDirection === 'right') {
-      this.setSelectionEnd(this.selectionEnd + offset);
+  _getSelectionForOffset: function(e, isRight) {
+    if (e.shiftKey && this.selectionStart !== this.selectionEnd && isRight) {
+      return this.selectionEnd;
     }
     else {
-      this.setSelectionStart(this.selectionStart + offset);
-    }
-    if (this.selectionEnd < this.selectionStart  && this._selectionDirection === 'left') {
-      this.swapSelectionPoints();
-      this._selectionDirection = 'right';
-    }
-    if (this.selectionEnd > this.text.length) {
-      this.setSelectionEnd(this.text.length);
+      return this.selectionStart;
     }
   },
 
@@ -321,72 +319,65 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
    * @return {Number}
    */
   getUpCursorOffset: function(e, isRight) {
-    var selectionProp = isRight ? this.selectionEnd : this.selectionStart,
+    var selectionProp = this._getSelectionForOffset(e, isRight),
         cursorLocation = this.get2DCursorLocation(selectionProp),
         lineIndex = cursorLocation.lineIndex;
-    // if on first line, up cursor goes to start of line
     if (lineIndex === 0 || e.metaKey || e.keyCode === 33) {
-      return selectionProp;
+      // if on first line, up cursor goes to start of line
+      return -selectionProp;
     }
-
-    var textOnSameLineBeforeCursor = this._textLines[lineIndex].slice(0, cursorLocation.charIndex),
-        textOnPreviousLine = this._textLines[lineIndex - 1] || '',
-        _char,
-        widthOfSameLineBeforeCursor = this._getLineWidth(this.ctx, cursorLocation.lineIndex),
-        lineLeftOffset = this._getLineLeftOffset(widthOfSameLineBeforeCursor),
-        widthOfCharsOnSameLineBeforeCursor = lineLeftOffset;
-
-    for (var i = 0, len = textOnSameLineBeforeCursor.length; i < len; i++) {
-      _char = textOnSameLineBeforeCursor[i];
-      widthOfCharsOnSameLineBeforeCursor += this._getWidthOfChar(this.ctx, _char, lineIndex, i);
-    }
-
-    var indexOnPrevLine = this._getIndexOnPrevLine(
-      cursorLocation, textOnPreviousLine, widthOfCharsOnSameLineBeforeCursor);
-
-    return textOnPreviousLine.length - indexOnPrevLine + textOnSameLineBeforeCursor.length;
+    var charIndex = cursorLocation.charIndex,
+        widthBeforeCursor = this._getWidthBeforeCursor(lineIndex, charIndex),
+        indexOnOtherLine = this._getIndexOnLine(lineIndex - 1, widthBeforeCursor),
+        textBeforeCursor = this._textLines[lineIndex].slice(0, charIndex);
+    // return a negative offset
+    return -this._textLines[lineIndex - 1].length + indexOnOtherLine - textBeforeCursor.length;
   },
 
   /**
+   * for a given width it founds the matching character.
    * @private
    */
-  _getIndexOnPrevLine: function(cursorLocation, textOnPreviousLine, widthOfCharsOnSameLineBeforeCursor) {
+  _getIndexOnLine: function(lineIndex, width) {
 
-    var lineIndex = cursorLocation.lineIndex - 1,
-        widthOfPreviousLine = this._getLineWidth(this.ctx, lineIndex),
-        lineLeftOffset = this._getLineLeftOffset(widthOfPreviousLine),
-        widthOfCharsOnPreviousLine = lineLeftOffset,
-        indexOnPrevLine = 0,
-        foundMatch;
+    var line = this._textLines[lineIndex],
+        lineLeftOffset = this._getLineLeftOffset(lineIndex),
+        widthOfCharsOnLine = lineLeftOffset,
+        indexOnLine = 0, charWidth, foundMatch;
 
-    for (var j = 0, jlen = textOnPreviousLine.length; j < jlen; j++) {
-
-      var _char = textOnPreviousLine[j],
-          widthOfChar = this._getWidthOfChar(this.ctx, _char, lineIndex, j);
-
-      widthOfCharsOnPreviousLine += widthOfChar;
-
-      if (widthOfCharsOnPreviousLine > widthOfCharsOnSameLineBeforeCursor) {
-
+    for (var j = 0, jlen = line.length; j < jlen; j++) {
+      charWidth = this.__charBounds[lineIndex][j].width;
+      widthOfCharsOnLine += charWidth;
+      if (widthOfCharsOnLine > width) {
         foundMatch = true;
+        var leftEdge = widthOfCharsOnLine - charWidth,
+            rightEdge = widthOfCharsOnLine,
+            offsetFromLeftEdge = Math.abs(leftEdge - width),
+            offsetFromRightEdge = Math.abs(rightEdge - width);
 
-        var leftEdge = widthOfCharsOnPreviousLine - widthOfChar,
-            rightEdge = widthOfCharsOnPreviousLine,
-            offsetFromLeftEdge = Math.abs(leftEdge - widthOfCharsOnSameLineBeforeCursor),
-            offsetFromRightEdge = Math.abs(rightEdge - widthOfCharsOnSameLineBeforeCursor);
-
-        indexOnPrevLine = offsetFromRightEdge < offsetFromLeftEdge ? j : (j - 1);
-
+        indexOnLine = offsetFromRightEdge < offsetFromLeftEdge ? j : (j - 1);
         break;
       }
     }
 
     // reached end
     if (!foundMatch) {
-      indexOnPrevLine = textOnPreviousLine.length - 1;
+      indexOnLine = line.length - 1;
     }
 
-    return indexOnPrevLine;
+    return indexOnLine;
+  },
+
+
+  /**
+   * Moves cursor down
+   * @param {Event} e Event object
+   */
+  moveCursorDown: function(e) {
+    if (this.selectionStart >= this._text.length && this.selectionEnd >= this._text.length) {
+      return;
+    }
+    this._moveCursorUpOrDown('Down', e);
   },
 
   /**
@@ -394,52 +385,64 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
    * @param {Event} e Event object
    */
   moveCursorUp: function(e) {
-
-    this.abortCursorAnimation();
-    this._currentCursorOpacity = 1;
-
-    var offset = this.getUpCursorOffset(e, this._selectionDirection === 'right');
-    if (e.shiftKey) {
-      this.moveCursorUpWithShift(offset);
+    if (this.selectionStart === 0 && this.selectionEnd === 0) {
+      return;
     }
-    else {
-      this.moveCursorUpWithoutShift(offset);
-    }
-
-    this.initDelayedCursor();
+    this._moveCursorUpOrDown('Up', e);
   },
 
   /**
-   * Moves cursor up with shift
-   * @param {Number} offset
+   * Moves cursor up or down, fires the events
+   * @param {String} direction 'Up' or 'Down'
+   * @param {Event} e Event object
    */
-  moveCursorUpWithShift: function(offset) {
-    if (this.selectionEnd === this.selectionStart) {
-      this._selectionDirection = 'left';
-    }
-    if (this._selectionDirection === 'right') {
-      this.setSelectionEnd(this.selectionEnd - offset);
+  _moveCursorUpOrDown: function(direction, e) {
+    // getUpCursorOffset
+    // getDownCursorOffset
+    var action = 'get' + direction + 'CursorOffset',
+        offset = this[action](e, this._selectionDirection === 'right');
+    if (e.shiftKey) {
+      this.moveCursorWithShift(offset);
     }
     else {
-      this.setSelectionStart(this.selectionStart - offset);
+      this.moveCursorWithoutShift(offset);
     }
-    if (this.selectionEnd < this.selectionStart && this._selectionDirection === 'right') {
-      this.swapSelectionPoints();
-      this._selectionDirection = 'left';
+    if (offset !== 0) {
+      this.setSelectionInBoundaries();
+      this.abortCursorAnimation();
+      this._currentCursorOpacity = 1;
+      this.initDelayedCursor();
+      this._fireSelectionChanged();
+      this._updateTextarea();
     }
+  },
+
+  /**
+   * Moves cursor with shift
+   * @param {Number} offset
+   */
+  moveCursorWithShift: function(offset) {
+    var newSelection = this._selectionDirection === 'left'
+      ? this.selectionStart + offset
+      : this.selectionEnd + offset;
+    this.setSelectionStartEndWithShift(this.selectionStart, this.selectionEnd, newSelection);
+    return offset !== 0;
   },
 
   /**
    * Moves cursor up without shift
    * @param {Number} offset
    */
-  moveCursorUpWithoutShift: function(offset) {
-    if (this.selectionStart === this.selectionEnd) {
-      this.setSelectionStart(this.selectionStart - offset);
+  moveCursorWithoutShift: function(offset) {
+    if (offset < 0) {
+      this.selectionStart += offset;
+      this.selectionEnd = this.selectionStart;
     }
-    this.setSelectionEnd(this.selectionStart);
-
-    this._selectionDirection = 'left';
+    else {
+      this.selectionEnd += offset;
+      this.selectionStart = this.selectionEnd;
+    }
+    return offset !== 0;
   },
 
   /**
@@ -450,33 +453,28 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
     if (this.selectionStart === 0 && this.selectionEnd === 0) {
       return;
     }
-
-    this.abortCursorAnimation();
-    this._currentCursorOpacity = 1;
-
-    if (e.shiftKey) {
-      this.moveCursorLeftWithShift(e);
-    }
-    else {
-      this.moveCursorLeftWithoutShift(e);
-    }
-
-    this.initDelayedCursor();
+    this._moveCursorLeftOrRight('Left', e);
   },
 
   /**
    * @private
+   * @return {Boolean} true if a change happened
    */
   _move: function(e, prop, direction) {
-    var propMethod = (prop === 'selectionStart' ? 'setSelectionStart' : 'setSelectionEnd');
+    var newValue;
     if (e.altKey) {
-      this[propMethod](this['findWordBoundary' + direction](this[prop]));
+      newValue = this['findWordBoundary' + direction](this[prop]);
     }
     else if (e.metaKey || e.keyCode === 35 ||  e.keyCode === 36 ) {
-      this[propMethod](this['findLineBoundary' + direction](this[prop]));
+      newValue = this['findLineBoundary' + direction](this[prop]);
     }
     else {
-      this[propMethod](this[prop] + (direction === 'Left' ? -1 : 1));
+      this[prop] += direction === 'Left' ? -1 : 1;
+      return true;
+    }
+    if (typeof newValue !== undefined && this[prop] !== newValue) {
+      this[prop] = newValue;
+      return true;
     }
   },
 
@@ -484,14 +482,14 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
    * @private
    */
   _moveLeft: function(e, prop) {
-    this._move(e, prop, 'Left');
+    return this._move(e, prop, 'Left');
   },
 
   /**
    * @private
    */
   _moveRight: function(e, prop) {
-    this._move(e, prop, 'Right');
+    return this._move(e, prop, 'Right');
   },
 
   /**
@@ -499,14 +497,17 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
    * @param {Event} e
    */
   moveCursorLeftWithoutShift: function(e) {
+    var change = true;
     this._selectionDirection = 'left';
 
     // only move cursor when there is no selection,
     // otherwise we discard it, and leave cursor on same place
-    if (this.selectionEnd === this.selectionStart) {
-      this._moveLeft(e, 'selectionStart');
+    if (this.selectionEnd === this.selectionStart && this.selectionStart !== 0) {
+      change = this._moveLeft(e, 'selectionStart');
+
     }
-    this.setSelectionEnd(this.selectionStart);
+    this.selectionEnd = this.selectionStart;
+    return change;
   },
 
   /**
@@ -515,11 +516,11 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
    */
   moveCursorLeftWithShift: function(e) {
     if (this._selectionDirection === 'right' && this.selectionStart !== this.selectionEnd) {
-      this._moveLeft(e, 'selectionEnd');
+      return this._moveLeft(e, 'selectionEnd');
     }
-    else {
+    else if (this.selectionStart !== 0){
       this._selectionDirection = 'left';
-      this._moveLeft(e, 'selectionStart');
+      return this._moveLeft(e, 'selectionStart');
     }
   },
 
@@ -528,21 +529,33 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
    * @param {Event} e Event object
    */
   moveCursorRight: function(e) {
-    if (this.selectionStart >= this.text.length && this.selectionEnd >= this.text.length) {
+    if (this.selectionStart >= this._text.length && this.selectionEnd >= this._text.length) {
       return;
     }
+    this._moveCursorLeftOrRight('Right', e);
+  },
 
-    this.abortCursorAnimation();
+  /**
+   * Moves cursor right or Left, fires event
+   * @param {String} direction 'Left', 'Right'
+   * @param {Event} e Event object
+   */
+  _moveCursorLeftOrRight: function(direction, e) {
+    var actionName = 'moveCursor' + direction + 'With';
     this._currentCursorOpacity = 1;
 
     if (e.shiftKey) {
-      this.moveCursorRightWithShift(e);
+      actionName += 'Shift';
     }
     else {
-      this.moveCursorRightWithoutShift(e);
+      actionName += 'outShift';
     }
-
-    this.initDelayedCursor();
+    if (this[actionName](e)) {
+      this.abortCursorAnimation();
+      this.initDelayedCursor();
+      this._fireSelectionChanged();
+      this._updateTextarea();
+    }
   },
 
   /**
@@ -551,11 +564,11 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
    */
   moveCursorRightWithShift: function(e) {
     if (this._selectionDirection === 'left' && this.selectionStart !== this.selectionEnd) {
-      this._moveRight(e, 'selectionStart');
+      return this._moveRight(e, 'selectionStart');
     }
-    else {
+    else if (this.selectionEnd !== this._text.length) {
       this._selectionDirection = 'right';
-      this._moveRight(e, 'selectionEnd');
+      return this._moveRight(e, 'selectionEnd');
     }
   },
 
@@ -564,66 +577,70 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
    * @param {Event} e Event object
    */
   moveCursorRightWithoutShift: function(e) {
+    var changed = true;
     this._selectionDirection = 'right';
 
     if (this.selectionStart === this.selectionEnd) {
-      this._moveRight(e, 'selectionStart');
-      this.setSelectionEnd(this.selectionStart);
+      changed = this._moveRight(e, 'selectionStart');
+      this.selectionEnd = this.selectionStart;
     }
     else {
-      this.setSelectionEnd(this.selectionEnd + this.getNumNewLinesInSelectedText());
-      this.setSelectionStart(this.selectionEnd);
+      this.selectionStart = this.selectionEnd;
     }
+    return changed;
   },
 
   /**
-   * Removes characters selected by selection
-   * @param {Event} e Event object
+   * Removes characters from start/end
+   * start/end ar per grapheme position in _text array.
+   *
+   * @param {Number} start
+   * @param {Number} end default to start + 1
    */
-  removeChars: function(e) {
-    if (this.selectionStart === this.selectionEnd) {
-      this._removeCharsNearCursor(e);
+  removeChars: function(start, end) {
+    if (typeof end === 'undefined') {
+      end = start + 1;
     }
-    else {
-      this._removeCharsFromTo(this.selectionStart, this.selectionEnd);
+    this.removeStyleFromTo(start, end);
+    this._text.splice(start, end - start);
+    this.text = this._text.join('');
+    this.set('dirty', true);
+    if (this._shouldClearDimensionCache()) {
+      this.initDimensions();
+      this.setCoords();
     }
-
-    this.setSelectionEnd(this.selectionStart);
-
     this._removeExtraneousStyles();
-
-    this.canvas && this.canvas.renderAll();
-
-    this.setCoords();
-    this.fire('changed');
-    this.canvas && this.canvas.fire('text:changed', { target: this });
   },
 
   /**
-   * @private
-   * @param {Event} e Event object
+   * insert characters at start position, before start position.
+   * start  equal 1 it means the text get inserted between actual grapheme 0 and 1
+   * if style array is provided, it must be as the same length of text in graphemes
+   * if end is provided and is bigger than start, old text is replaced.
+   * start/end ar per grapheme position in _text array.
+   *
+   * @param {String} text text to insert
+   * @param {Array} style array of style objects
+   * @param {Number} start
+   * @param {Number} end default to start + 1
    */
-  _removeCharsNearCursor: function(e) {
-    if (this.selectionStart === 0) {
-      return;
+  insertChars: function(text, style, start, end) {
+    if (typeof end === 'undefined') {
+      end = start;
     }
-    if (e.metaKey) {
-      // remove all till the start of current line
-      var leftLineBoundary = this.findLineBoundaryLeft(this.selectionStart);
+    if (end > start) {
+      this.removeStyleFromTo(start, end);
+    }
+    var graphemes = fabric.util.string.graphemeSplit(text);
+    this.insertNewStyleBlock(graphemes, start, style);
+    this._text = [].concat(this._text.slice(0, start), graphemes, this._text.slice(end));
+    this.text = this._text.join('');
+    this.set('dirty', true);
+    if (this._shouldClearDimensionCache()) {
+      this.initDimensions();
+      this.setCoords();
+    }
+    this._removeExtraneousStyles();
+  },
 
-      this._removeCharsFromTo(leftLineBoundary, this.selectionStart);
-      this.setSelectionStart(leftLineBoundary);
-    }
-    else if (e.altKey) {
-      // remove all till the start of current word
-      var leftWordBoundary = this.findWordBoundaryLeft(this.selectionStart);
-
-      this._removeCharsFromTo(leftWordBoundary, this.selectionStart);
-      this.setSelectionStart(leftWordBoundary);
-    }
-    else {
-      this._removeSingleCharAndStyle(this.selectionStart);
-      this.setSelectionStart(this.selectionStart - 1);
-    }
-  }
 });

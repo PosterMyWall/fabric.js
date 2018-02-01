@@ -6,7 +6,13 @@
       s = p / 4;
     }
     else {
-      s = p / (2 * Math.PI) * Math.asin(c / a);
+      //handle the 0/0 case:
+      if (c === 0 && a === 0) {
+        s = p / (2 * Math.PI) * Math.asin(1);
+      }
+      else {
+        s = p / (2 * Math.PI) * Math.asin(c / a);
+      }
     }
     return { a: a, c: c, p: p, s: s };
   }
@@ -30,7 +36,7 @@
    * @memberOf fabric.util.ease
    */
   function easeInOutCubic(t, b, c, d) {
-    t /= d/2;
+    t /= d / 2;
     if (t < 1) {
       return c / 2 * t * t * t + b;
     }
@@ -296,10 +302,10 @@
     if ((t /= d) < (1 / 2.75)) {
       return c * (7.5625 * t * t) + b;
     }
-    else if (t < (2/2.75)) {
+    else if (t < (2 / 2.75)) {
       return c * (7.5625 * (t -= (1.5 / 2.75)) * t + 0.75) + b;
     }
-    else if (t < (2.5/2.75)) {
+    else if (t < (2.5 / 2.75)) {
       return c * (7.5625 * (t -= (2.25 / 2.75)) * t + 0.9375) + b;
     }
     else {
@@ -389,4 +395,4 @@
     easeInOutBounce: easeInOutBounce
   };
 
-}());
+})();

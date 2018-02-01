@@ -10,7 +10,7 @@
 (function() {
 
   var degreesToRadians = fabric.util.degreesToRadians,
-          radiansToDegrees = fabric.util.radiansToDegrees;
+      radiansToDegrees = fabric.util.radiansToDegrees;
 
   fabric.util.object.extend(fabric.Canvas.prototype, /** @lends fabric.Canvas.prototype */ {
     /**
@@ -48,8 +48,8 @@
       }
 
       var self = this.__gesturesParams.self,
-              t = this._currentTransform,
-              e = this.__gesturesParams.e;
+          t = this._currentTransform,
+          e = this.__gesturesParams.e;
 
       t.action = 'scale';
       t.originX = t.originY = 'center';
@@ -64,7 +64,7 @@
 
       this._setCenterToOrigin(t.target);
 
-      this.renderAll();
+      this.requestRenderAll();
       t.action = 'drag';
     },
 
@@ -129,9 +129,9 @@
      */
     _scaleObjectBy: function(s, e) {
       var t = this._currentTransform,
-              target = t.target,
-              lockScalingX = target.get('lockScalingX'),
-              lockScalingY = target.get('lockScalingY');
+          target = t.target,
+          lockScalingX = target.get('lockScalingX'),
+          lockScalingY = target.get('lockScalingY');
 
       if (lockScalingX && lockScalingY) {
         return;
@@ -140,10 +140,10 @@
       target._scaling = true;
 
       var constraintPosition = target.translateToOriginPoint(target.getCenterPoint(), t.originX, t.originY),
-        dim = target._getNonTransformedDimensions();
+          dim = target._getTransformedDimensions();
 
-      this._setObjectScale(new fabric.Point(t.scaleX * s * dim.x, t.scaleY * s * dim.y),
-        t, lockScalingX, lockScalingY, null, target.get('lockScalingFlip'));
+      this._setObjectScale(new fabric.Point(t.scaleX * dim.x * s / target.scaleX, t.scaleY * dim.y * s / target.scaleY),
+        t, lockScalingX, lockScalingY, null, target.get('lockScalingFlip'), dim);
 
       target.setPositionByOrigin(constraintPosition, t.originX, t.originY);
 
