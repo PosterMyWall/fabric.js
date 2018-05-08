@@ -89,7 +89,7 @@
                 return;
             }
             ctx.save();
-            this._setStrokeStyles(ctx);
+            this._setStrokeStyles(ctx, this);
             ctx.strokeRect(
                 (-(this.width / 2)),
                 (-(this.height / 2)),
@@ -215,7 +215,7 @@
         getHeightOfRow: function (row) {
             var height = 0, h;
             for (var i = 0; i < this.columns; i++) {
-                h = this.tableArray[i][row]._getTextHeight();
+                h = this.tableArray[i][row].calcTextHeight();
                 if (h > height) {
                     height = h
                 }
@@ -231,7 +231,7 @@
         getWidthOfColumn: function (column) {
             var width = 0, w;
             for (var i = 0; i < this.rows; i++) {
-                w = this.tableArray[column][i]._getTextWidth();
+                w = this.tableArray[column][i].calcTextWidth();
                 if (w > width) {
                     width = w
                 }

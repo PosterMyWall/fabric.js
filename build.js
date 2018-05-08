@@ -225,18 +225,12 @@ var filesToInclude = [
   ifSpecifiedInclude('image_filters', 'src/filters/gradienttransparency_filter.class.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/grayscale_filter.class.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/invert_filter.class.js'),
-  ifSpecifiedInclude('image_filters', 'src/filters/mask_filter.class.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/noise_filter.class.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/pixelate_filter.class.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/removecolor_filter.class.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/filter_generator.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/blendcolor_filter.class.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/blendimage_filter.class.js'),
-  ifSpecifiedInclude('image_filters', 'src/filters/sepia_filter.class.js'),
-  ifSpecifiedInclude('image_filters', 'src/filters/sepia2_filter.class.js'),
-  ifSpecifiedInclude('image_filters', 'src/filters/tint_filter.class.js'),
-  ifSpecifiedInclude('image_filters', 'src/filters/multiply_filter.class.js'),
-  ifSpecifiedInclude('image_filters', 'src/filters/blend_filter.class.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/resize_filter.class.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/contrast_filter.class.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/saturate_filter.class.js'),
@@ -257,8 +251,7 @@ var filesToInclude = [
 
   ifSpecifiedInclude('textbox', 'src/shapes/textbox.class.js'),
   ifSpecifiedInclude('textbox', 'src/mixins/textbox_behavior.mixin.js'),
-  ifSpecifiedInclude('textbox', 'src/mixins/textbox_click_behavior.mixin.js'),
-    
+
   ifSpecifiedInclude('tabs', 'src/shapes/tabs.class.js'),
   ifSpecifiedInclude('table', 'src/shapes/table.class.js'),
   ifSpecifiedInclude('menu', 'src/shapes/menu.class.js'),

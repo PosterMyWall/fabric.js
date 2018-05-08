@@ -333,7 +333,6 @@
       }
 
       if (this.canvas) {
-        this.canvas.calcOffset();
         this.exitEditingOnOthers(this.canvas);
       }
 

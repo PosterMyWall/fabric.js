@@ -38,188 +38,77 @@
     toDataURL: function (options) {
       options || (options = { });
 
-    var format = options.format || 'png',
-        quality = options.quality || 1,
-        multiplier = options.multiplier || 1,
-        clear = options.clear || false,
-        cropping = {
-          left: options.left || 0,
-          top: options.top || 0,
-          width: options.width || 0,
-          height: options.height || 0,
-        };
-
-    if (multiplier !== 1) {
+      var format = options.format || 'png',
+          quality = options.quality || 1,
+          multiplier = options.multiplier || 1,
+          cropping = {
+            left: options.left || 0,
+            top: options.top || 0,
+            width: options.width || 0,
+            height: options.height || 0,
+          };
       return this.__toDataURLWithMultiplier(format, quality, cropping, multiplier);
-    }
-    else {
-      return this.__toDataURL(format, quality, cropping);
-    }
-  },
+    },
 
-  /**
-   * @private
-   */
-  __toDataURL: function(format, quality, cropping) {
+    /**
+     * @private
+     */
+    __toDataURLWithMultiplier: function (format, quality, cropping, multiplier) {
 
-    this.renderAll();
+      var origWidth = this.width,
+          origHeight = this.height,
+          scaledWidth = (cropping.width || this.width) * multiplier,
+          scaledHeight = (cropping.height || this.height) * multiplier,
+          zoom = this.getZoom(),
+          newZoom = zoom * multiplier,
+          vp = this.viewportTransform,
+          translateX = (vp[4] - cropping.left) * multiplier,
+          translateY = (vp[5] - cropping.top) * multiplier,
+          newVp = [newZoom, 0, 0, newZoom, translateX, translateY],
+          originalInteractive = this.interactive,
+          originalSkipOffScreen = this.skipOffscreen,
+          needsResize = origWidth !== scaledWidth || origHeight !== scaledHeight;
 
-    var canvasEl = this.lowerCanvasEl,
-        croppedCanvasEl = this.__getCroppedCanvas(canvasEl, cropping);
+      this.viewportTransform = newVp;
+      this.skipOffscreen = false;
+      // setting interactive to false avoid exporting controls
+      this.interactive = false;
+      if (needsResize) {
+        this.setDimensions({width: scaledWidth, height: scaledHeight}, {backstoreOnly: true});
+      }
+      // call a renderAll to force sync update. This will cancel the scheduled requestRenderAll
+      // from setDimensions
+      this.renderAll();
+      var data = this.__toDataURL(format, quality, cropping);
+      this.interactive = originalInteractive;
+      this.skipOffscreen = originalSkipOffScreen;
+      this.viewportTransform = vp;
+      //setDimensions with no option object is taking care of:
+      //this.width, this.height, this.requestRenderAll()
+      if (needsResize) {
+        this.setDimensions({width: origWidth, height: origHeight}, {backstoreOnly: true});
+      }
+      this.renderAll();
+      return data;
+    },
 
-    // to avoid common confusion https://github.com/kangax/fabric.js/issues/806
-    if (format === 'jpg') {
-      format = 'jpeg';
-    }
+    /**
+     * @private
+     */
+    __toDataURL: function (format, quality) {
 
-    var data = (fabric.StaticCanvas.supports('toDataURLWithQuality'))
-              ? (croppedCanvasEl || canvasEl).toDataURL('image/' + format, quality)
-              : (croppedCanvasEl || canvasEl).toDataURL('image/' + format);
+      var canvasEl = this.contextContainer.canvas;
+      // to avoid common confusion https://github.com/kangax/fabric.js/issues/806
+      if (format === 'jpg') {
+        format = 'jpeg';
+      }
 
-    if (croppedCanvasEl) {
-      croppedCanvasEl = null;
-    }
+      var data = supportQuality
+          ? canvasEl.toDataURL('image/' + format, quality)
+          : canvasEl.toDataURL('image/' + format);
 
-    return data;
-  },
+      return data;
+    },
+  });
 
-  /**
-   * @private
-   */
-  __getCroppedCanvas: function(canvasEl, cropping) {
-
-    var croppedCanvasEl,
-        croppedCtx,
-        shouldCrop = 'left' in cropping ||
-                     'top' in cropping ||
-                     'width' in cropping ||
-                     'height' in cropping;
-
-    if (shouldCrop) {
-
-      croppedCanvasEl = fabric.util.createCanvasElement();
-      croppedCtx = croppedCanvasEl.getContext('2d');
-
-      croppedCanvasEl.width = cropping.width || this.width;
-      croppedCanvasEl.height = cropping.height || this.height;
-
-      croppedCtx.drawImage(canvasEl, -cropping.left || 0, -cropping.top || 0);
-    }
-
-    return croppedCanvasEl;
-  },
-
-  /**
-   * @private
-   */
-  __toDataURLWithMultiplier: function(format, quality, cropping, multiplier) {
-
-    var origWidth = this.getWidth(),
-        origHeight = this.getHeight(),
-        scaledWidth = origWidth * multiplier,
-        scaledHeight = origHeight * multiplier,
-        activeObject = this.getActiveObject(),
-        activeGroup = this.getActiveGroup(),
-
-        ctx = this.contextContainer;
-
-    if (multiplier > 1) {
-      this.setWidth(scaledWidth).setHeight(scaledHeight);
-    }
-    ctx.scale(multiplier, multiplier);
-
-    if (cropping.left) {
-      cropping.left *= multiplier;
-    }
-    if (cropping.top) {
-      cropping.top *= multiplier;
-    }
-    if (cropping.width) {
-      cropping.width *= multiplier;
-    }
-    else if (multiplier < 1) {
-      cropping.width = scaledWidth;
-    }
-    if (cropping.height) {
-      cropping.height *= multiplier;
-    }
-    else if (multiplier < 1) {
-      cropping.height = scaledHeight;
-    }
-
-    if (activeGroup) {
-      // not removing group due to complications with restoring it with correct state afterwords
-      this._tempRemoveBordersControlsFromGroup(activeGroup);
-    }
-    else if (activeObject && this.deactivateAll) {
-      this.deactivateAll();
-    }
-
-    var data = this.__toDataURL(format, quality, cropping);
-
-    // restoring width, height for `renderAll` to draw
-    // background properly (while context is scaled)
-    this.width = origWidth;
-    this.height = origHeight;
-
-    ctx.scale(1 / multiplier,  1 / multiplier);
-    this.setWidth(origWidth).setHeight(origHeight);
-
-    if (activeGroup) {
-      this._restoreBordersControlsOnGroup(activeGroup);
-    }
-    else if (activeObject && this.setActiveObject) {
-      this.setActiveObject(activeObject);
-    }
-
-    this.contextTop && this.clearContext(this.contextTop);
-    this.renderAll();
-
-    return data;
-  },
-
-  /**
-   * Exports canvas element to a dataurl image (allowing to change image size via multiplier).
-   * @deprecated since 1.0.13
-   * @param {String} format (png|jpeg)
-   * @param {Number} multiplier
-   * @param {Number} quality (0..1)
-   * @return {String}
-   */
-  toDataURLWithMultiplier: function (format, multiplier, quality) {
-    return this.toDataURL({
-      format: format,
-      multiplier: multiplier,
-      quality: quality
-    });
-  },
-
-  /**
-   * @private
-   */
-  _tempRemoveBordersControlsFromGroup: function(group) {
-    group.origHasControls = group.hasControls;
-    group.origBorderColor = group.borderColor;
-
-    group.hasControls = true;
-    group.borderColor = 'rgba(0,0,0,0)';
-
-    group.forEachObject(function(o) {
-      o.origBorderColor = o.borderColor;
-      o.borderColor = 'rgba(0,0,0,0)';
-    });
-  },
-
-  /**
-   * @private
-   */
-  _restoreBordersControlsOnGroup: function(group) {
-    group.hideControls = group.origHideControls;
-    group.borderColor = group.origBorderColor;
-
-    group.forEachObject(function(o) {
-      o.borderColor = o.origBorderColor;
-      delete o.origBorderColor;
-    });
-  }
-});
+})();

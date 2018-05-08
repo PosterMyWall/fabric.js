@@ -220,7 +220,6 @@
      * @default
      */
     cornerColor:              'rgba(255,255,255,1)',
-
     /**
      * PosterMyWall property used for showing the replace image button when editing a template.
      * @type Boolean
@@ -248,14 +247,13 @@
      * @default
      */
     buttonText: 'replace image',
-
     /**
      * Color of controlling corners of an object (when it's active and transparentCorners false)
      * @since 1.6.2
      * @type String
      * @default
      */
-    cornerStrokeColor:        null,
+    cornerStrokeColor: 'rgba(98,255,231,1)',
 
     /**
      * Specify style of control, 'rect' or 'circle'
@@ -270,6 +268,24 @@
      * @type Array
      */
     cornerDashArray:          null,
+
+    /**
+     * Indicates the angle that an object will lock to while rotating.
+     * @type Number
+     * @since 1.6.7
+     * @default
+     */
+    snapAngle: 0,
+
+    /**
+     * Indicates the distance from the snapAngle the rotation will lock to the snapAngle.
+     * When `null`, the snapThreshold will default to the snapAngle.
+     * @type null|Number
+     * @since 1.6.7
+     * @default
+     */
+    snapThreshold: null,
+
 
     /**
      * When true, this object will use center point as the origin of transformation
@@ -537,6 +553,7 @@
      * @type Boolean
      * @default
      */
+
     lockScalingFlip:          true,
 
     /**
@@ -548,13 +565,16 @@
     excludeFromExport:        false,
 
     /**
+     * PosterMyWall Change: Setting it to false for now as Text is getting bolder when objectCaching is On
+     *
      * When `true`, object is cached on an additional canvas.
      * default to true
      * since 1.7.0
      * @type Boolean
      * @default true
      */
-    objectCaching:            objectCaching,
+    objectCaching: false,
+    // objectCaching:            objectCaching,
 
     /**
      * When `true`, object properties are checked for cache invalidation. In some particular
@@ -878,6 +898,7 @@
     _removeDefaultValues: function(object) {
       var prototype = fabric.util.getKlass(object.type).prototype,
           stateProperties = prototype.stateProperties;
+
       stateProperties.forEach(function(prop) {
         if (object[prop] === prototype[prop]) {
           delete object[prop];
@@ -926,24 +947,6 @@
         opacity *= this.group.getObjectOpacity();
       }
       return opacity;
-    },
-
-    /**
-     * Basic getter
-     * @param {String} property Property name
-     * @return {Any} value of a property
-     */
-    get: function(property) {
-      return this[property];
-    },
-
-    /**
-     * @private
-     */
-    _setObject: function(obj) {
-      for (var prop in obj) {
-        this._set(prop, obj[prop]);
-      }
     },
 
     /**
@@ -1042,7 +1045,7 @@
      * @return {Boolean}
      */
     isNotVisible: function() {
-      return this.opacity === 0 || (this.width === 0 && this.height === 0) || !this.visible;
+      return (this.width === 0 && this.height === 0) || !this.visible;
     },
 
     /**
@@ -1058,15 +1061,11 @@
         return;
       }
       ctx.save();
-      //setup fill rule for current object
       this._setupCompositeOperation(ctx);
       this.drawSelectionBackground(ctx);
       this.transform(ctx);
       this._setOpacity(ctx);
       this._setShadow(ctx, this);
-      if(this.type !== 'path') {
-        this._setStrokeStyles(ctx);
-      }
       if (this.transformMatrix) {
         ctx.transform.apply(ctx, this.transformMatrix);
       }
@@ -1513,14 +1512,6 @@
         multX *= fabric.devicePixelRatio;
         multY *= fabric.devicePixelRatio;
       }
-
-      // temporary fix for the shadow bug while taking the snapshot
-      // remove the below if statement and code inside before updating the fabricjs with latest build on github
-      if(typeof ctx.__multiplier == 'number') {
-        multX *= ctx.__multiplier;
-        multY *= ctx.__multiplier;
-      }
-      
       ctx.shadowColor = this.shadow.color;
       ctx.shadowBlur = this.shadow.blur * fabric.browserShadowBlurConstant *
         (multX + multY) * (scaling.scaleX + scaling.scaleY) / 4;
@@ -1722,11 +1713,7 @@
       el.width = boundingRect.width;
       el.height = boundingRect.height;
       fabric.util.wrapElement(el, 'div');
-      var canvas = new fabric.StaticCanvas(el, {
-        enableRetinaScaling: options.enableRetinaScaling,
-        renderOnAddRemove: false,
-        skipOffscreen: false,
-      });
+      var canvas = new fabric.StaticCanvas(el, {enableRetinaScaling: options.enableRetinaScaling});
       // to avoid common confusion https://github.com/kangax/fabric.js/issues/806
       if (options.format === 'jpg') {
         options.format = 'jpeg';
@@ -1746,12 +1733,10 @@
       var originalCanvas = this.canvas;
       canvas.add(this);
       var data = canvas.toDataURL(options);
+
       this.set(origParams).setCoords();
       this.canvas = originalCanvas;
-      // canvas.dispose will call image.dispose that will nullify the elements
-      // since this canvas is a simple element for the process, we remove references
-      // to objects in this way in order to avoid object trashing.
-      canvas._objects = [];
+
       canvas.dispose();
       canvas = null;
 

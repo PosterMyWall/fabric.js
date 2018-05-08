@@ -110,7 +110,7 @@ fabric.textureSize = 2048;
  * @type Boolean
  * @default
  */
-fabric.enableGLFiltering = true;
+fabric.enableGLFiltering = false;
 
 /**
  * Device Pixel Ratio
@@ -138,7 +138,7 @@ fabric.browserShadowBlurConstant = 1;
 
 fabric.initFilterBackend = function() {
   if (fabric.enableGLFiltering && fabric.isWebglSupported && fabric.isWebglSupported(fabric.textureSize)) {
-    console.log('max texture size: ' + fabric.maxTextureSize);
+      // console.log('max texture size: ' + fabric.maxTextureSize);
     return (new fabric.WebglFilterBackend({ tileSize: fabric.textureSize }));
   }
   else if (fabric.Canvas2dFilterBackend) {

@@ -108,6 +108,7 @@
         }
       }
       if (this.useSetOnGroup) {
+        i = this._objects.length;
         while (i--) {
           this._objects[i].setOnGroup(key, value);
         }
@@ -149,6 +150,10 @@
      */
     isOnACache: function() {
       return false;
+    },
+
+    getObjects: function () {
+      return this._objects;
     },
 
     /**

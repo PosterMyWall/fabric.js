@@ -21,6 +21,15 @@
          */
         type: 'tabs'
     });
-    fabric.Tabs.fromObject = fabric.Group.fromObject
+    /**
+     * Returns {@link fabric.Rect} instance from an object representation
+     * @static
+     * @memberOf fabric.Rect
+     * @param {Object} object Object to create an instance from
+     * @param {Function} [callback] Callback to invoke when an fabric.Rect instance is created
+     */
+    fabric.Tabs.fromObject = function (object, callback) {
+        return fabric.Object._fromObject('tabs', object, callback);
+    };
     
 })(typeof exports !== 'undefined' ? exports : this);

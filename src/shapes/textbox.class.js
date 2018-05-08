@@ -2,7 +2,8 @@
 
   'use strict';
 
-  var fabric = global.fabric || (global.fabric = {});
+  var fabric = global.fabric || (global.fabric = {}),
+      clone = fabric.util.object.clone;
 
   /**
    * Textbox class, based on IText, allows the user to resize the text rectangle
@@ -16,21 +17,18 @@
    * @see {@link fabric.Textbox#initialize} for constructor definition
    */
   fabric.Textbox = fabric.util.createClass(fabric.IText, fabric.Observable, {
-
     /**
      * Type of an object
      * @type String
      * @default
      */
     type: 'textbox',
-
     /**
      * Minimum width of textbox, in pixels.
      * @type Number
      * @default
      */
     minWidth: 20,
-
     /**
      * Minimum calculated width of a textbox, in pixels.
      * fixed to 2 so that an empty textbox cannot go to 0
@@ -73,12 +71,25 @@
      * @return {fabric.Textbox} thisArg
      */
     initialize: function(text, options) {
+      // this.ctx = fabric.util.createCanvasElement().getContext('2d');
+
       this.callSuper('initialize', text, options);
+      this.set({
+        lockUniScaling: false,
+        lockScalingY: true,
+        lockScalingFlip: true,
+        hasBorders: true
+      });
+      this.setControlsVisibility(fabric.Textbox.getTextboxControlVisibility());
+
+      // add width to this list of props that effect line wrapping.
+      this._dimensionAffectingProps.width = true;
     },
 
     /**
      * Unlike superclass's version of this function, Textbox does not update
      * its width.
+     * @param {CanvasRenderingContext2D} ctx Context to use for measurements
      * @private
      * @override
      */
@@ -295,7 +306,7 @@
         wordWidth = this._measureWord(word, lineIndex, offset);
         offset += word.length;
 
-        lineWidth += infixWidth + wordWidth - additionalSpace;
+        lineWidth += infixWidth + wordWidth;
 
         if (lineWidth >= desiredWidth && !lineJustStarted) {
           graphemeLines.push(line);
@@ -365,101 +376,24 @@
       return newText;
     },
 
-    // /**
-    //  * When part of a group, we don't want the Textbox's scale to increase if
-    //  * the group's increases. That's why we reduce the scale of the Textbox by
-    //  * the amount that the group's increases. This is to maintain the effective
-    //  * scale of the Textbox at 1, so that font-size values make sense. Otherwise
-    //  * the same font-size value would result in different actual size depending
-    //  * on the value of the scale.
-    //  * @param {String} key
-    //  * @param {Any} value
-    //  */
-    // setOnGroup: function(key, value) {
-    //   if (key === 'scaleX') {
-    //     this.set('scaleX', Math.abs(1 / value));
-    //     // this.set('width', (this.get('width') * value) /
-    //     //   (typeof this.__oldScaleX === 'undefined' ? 1 : this.__oldScaleX));
-    //     // this.__oldScaleX = value;
-    //   }
-    //   if (key == 'scaleY') {
-    //     this.set('scaleY', Math.abs(1 / value));
-    //     // this.set('fontSize', (this.fontSize * value) /
-    //     //     (typeof this.__oldScaleY=== 'undefined' ? 1 : this.__oldScaleY));
-    //     // this.__oldScaleY = value;
-    //   }
-    // },
-    //
-    // /**
-    //  * Returns 2d representation (lineIndex and charIndex) of cursor (or selection start).
-    //  * Overrides the superclass function to take into account text wrapping.
-    //  *
-    //  * @param {Number} [selectionStart] Optional index. When not given, current selectionStart is used.
-    //  */
-    // get2DCursorLocation: function(selectionStart) {
-    //   if (typeof selectionStart === 'undefined') {
-    //     selectionStart = this.selectionStart;
-    //   }
-    //
-    //   var numLines = this._textLines.length,
-    //       removed  = 0;
-    //
-    //   for (var i = 0; i < numLines; i++) {
-    //     var line    = this._textLines[i],
-    //         lineLen = line.length;
-    //
-    //     if (selectionStart <= removed + lineLen) {
-    //       return {
-    //         lineIndex: i,
-    //         charIndex: selectionStart - removed
-    //       };
-    //     }
-    //
-    //     removed += lineLen;
-    //
-    //     if (this.text[removed] === '\n' || this.text[removed] === ' ') {
-    //       removed++;
-    //     }
-    //   }
-    //
-    //   return {
-    //     lineIndex: numLines - 1,
-    //     charIndex: this._textLines[numLines - 1].length
-    //   };
-    // },
-    //
-    // /**
-    //  * Overrides superclass function and uses text wrapping data to get cursor
-    //  * boundary offsets instead of the array of chars.
-    //  * @param {Array} chars Unused
-    //  * @param {String} typeOfBoundaries Can be 'cursor' or 'selection'
-    //  * @returns {Object} Object with 'top', 'left', and 'lineLeft' properties set.
-    //  */
-    // _getCursorBoundariesOffsets: function(chars, typeOfBoundaries) {
-    //   var topOffset      = 0,
-    //       leftOffset     = 0,
-    //       cursorLocation = this.get2DCursorLocation(),
-    //       lineChars      = this._textLines[cursorLocation.lineIndex].split(''),
-    //       lineLeftOffset = this._getLineLeftOffset(this._getLineWidth(this.ctx, cursorLocation.lineIndex));
-    //
-    //   for (var i = 0; i < cursorLocation.charIndex; i++) {
-    //     leftOffset += this._getWidthOfChar(this.ctx, lineChars[i], cursorLocation.lineIndex, i);
-    //   }
-    //
-    //   for (i = 0; i < cursorLocation.lineIndex; i++) {
-    //     topOffset += this._getHeightOfLine(this.ctx, i);
-    //   }
-    //
-    //   if (typeOfBoundaries === 'cursor') {
-    //     topOffset += (1 - this._fontSizeFraction) * this._getHeightOfLine(this.ctx, cursorLocation.lineIndex) / this.lineHeight - this.getCurrentCharFontSize(cursorLocation.lineIndex, cursorLocation.charIndex) * (1 - this._fontSizeFraction);
-    //   }
-    //
-    //   return {
-    //     top: topOffset,
-    //     left: leftOffset,
-    //     lineLeft: lineLeftOffset
-    //   };
-    // },
+    /**
+     * When part of a group, we don't want the Textbox's scale to increase if
+     * the group's increases. That's why we reduce the scale of the Textbox by
+     * the amount that the group's increases. This is to maintain the effective
+     * scale of the Textbox at 1, so that font-size values make sense. Otherwise
+     * the same font-size value would result in different actual size depending
+     * on the value of the scale.
+     * @param {String} key
+     * @param {Any} value
+     */
+    setOnGroup: function (key, value) {
+      if (key === 'scaleX') {
+        this.set('scaleX', Math.abs(1 / value));
+      }
+      if (key == 'scaleY') {
+        this.set('scaleY', Math.abs(1 / value));
+      }
+    },
 
     getMinWidth: function() {
       return Math.max(this.minWidth, this.dynamicMinWidth);
@@ -486,4 +420,28 @@
   fabric.Textbox.fromObject = function(object, callback) {
     return fabric.Object._fromObject('Textbox', object, callback, 'text');
   };
+  /**
+   * Returns the default controls visibility required for Textboxes.
+   * @returns {Object}
+   */
+  fabric.Textbox.getTextboxControlVisibility = function () {
+    return {
+      tl: false,
+      tr: false,
+      br: false,
+      bl: false,
+      ml: true,
+      mt: false,
+      mr: true,
+      mb: false,
+      mtr: true
+    };
+  };
+  /**
+   * Contains all fabric.Textbox objects that have been created
+   * @static
+   * @memberOf fabric.Textbox
+   * @type Array
+   */
+  fabric.Textbox.instances = [];
 })(typeof exports !== 'undefined' ? exports : this);

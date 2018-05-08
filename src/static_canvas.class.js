@@ -918,28 +918,36 @@
      * @return {fabric.StaticCanvas}
      */
     renderAllWithoutClearing: function () {
-      var canvasToDrawOn = this.contextContainer,
-          activeGroup = this.getActiveGroup();
-
-      if (this.clipTo) {
-        fabric.util.clipContext(this, canvasToDrawOn);
+      var v = this.viewportTransform,
+          objects = this._objects,
+          ctx = this.contextContainer;
+      if (this.isRendering) {
+        fabric.util.cancelAnimFrame(this.isRendering);
+        this.isRendering = 0;
       }
-
-      this._renderBackground(canvasToDrawOn);
-      this._renderObjects(canvasToDrawOn, activeGroup);
-      this._renderActiveGroup(canvasToDrawOn, activeGroup);
-
+      this.calcViewportBoundaries();
+      this.fire('before:render');
       if (this.clipTo) {
-        canvasToDrawOn.restore();
+        fabric.util.clipContext(this, ctx);
       }
+      this._renderBackground(ctx);
 
-      this._renderOverlay(canvasToDrawOn);
-
+      ctx.save();
+      //apply viewport transform once for all rendering process
+      ctx.transform(v[0], v[1], v[2], v[3], v[4], v[5]);
+      this._renderObjects(ctx, objects);
+      ctx.restore();
+      if (!this.controlsAboveOverlay && this.interactive) {
+        this.drawControls(ctx);
+      }
+      if (this.clipTo) {
+        ctx.restore();
+      }
+      this._renderOverlay(ctx);
       if (this.controlsAboveOverlay && this.interactive) {
-        this.drawControls(canvasToDrawOn);
+        this.drawControls(ctx);
       }
-
-      return this;
+      this.fire('after:render');
     },
 
     /**

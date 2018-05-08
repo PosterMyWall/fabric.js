@@ -11,6 +11,18 @@
     return;
   }
 
+  // lock-related properties, for use in fabric.Group#get
+  // to enable locking behavior on group
+  // when one of its objects has lock-related properties set
+  var _lockProperties = {
+    lockMovementX: true,
+    lockMovementY: true,
+    lockRotation: true,
+    lockScalingX: true,
+    lockScalingY: true,
+    lockUniScaling: true
+  };
+
   /**
    * Group class
    * @class fabric.Group
@@ -33,19 +45,7 @@
      * @type Number
      * @default
      */
-    strokeWidth: 0, 
-      
-    /**
-     * Whether to render a rectangle background or a tilted background
-     * @type Boolean
-     */
-    leanBackground: false, 
-     
-    /**
-     * Leanness of background
-     * @type Number
-     */
-    leanBackgroundOffset: 0,
+    strokeWidth: 0,
 
     /**
      * Indicates if click events should also check for subtargets
@@ -68,7 +68,19 @@
      * @since 2.0.0
      * @default
      */
-    useSetOnGroup: false,
+    useSetOnGroup: true,
+
+    /**
+     * Whether to render a rectangle background or a tilted background
+     * @type Boolean
+     */
+    leanBackground: false,
+
+    /**
+     * Leanness of background
+     * @type Number
+     */
+    leanBackgroundOffset: 0,
 
     /**
      * Constructor
@@ -83,7 +95,6 @@
       // if objects enclosed in a group have been grouped already,
       // we cannot change properties of objects.
       // Thus we need to set options to group without objects,
-      // because delegatedProperties propagate to objects.
       isAlreadyGrouped && this.callSuper('initialize', options);
       this._objects = objects || [];
       for (var i = this._objects.length; i--; ) {
@@ -230,6 +241,7 @@
           fontStyle:        true,
           lineHeight:       true,
           letterSpacing:    true,
+        charSpacing: true,
           text:             true,
           textDecoration:   true,
           textAlign:        true
@@ -245,10 +257,10 @@
           this._objects[i].setOnGroup(key, value);
         }
       }
-      if (key === 'canvas') {
+      if (this.delegatedProperties[key] || key === 'canvas') {
         i = this._objects.length;
         while (i--) {
-          this._objects[i]._set(key, value);
+          this._objects[i].set(key, value);
         }
       }
       this.callSuper('_set', key, value);
@@ -301,37 +313,59 @@
      * @param {CanvasRenderingContext2D} ctx context to render instance on
      */
     render: function(ctx) {
-        this._transformDone = true;
-        this.callSuper('render', ctx);
+      this._transformDone = true;
+      ctx.save();
+      this.transform(ctx);
+      if (this instanceof fabric.Table) {
+        this.renderTableCustomBackground(ctx);
+        this.renderTableBorders(ctx);
+      }
+      else {
+        this.renderGroupBackground(ctx);
+      }
+      ctx.restore();
+      this.callSuper('render', ctx);
+      this._transformDone = false;
+    },
 
+    /**
+     * Renders background color for groups
+     * @param ctx Context to render on
+     */
+    renderGroupBackground: function (ctx) {
+      if (!this.backgroundColor) {
+        return;
+      }
+
+      if (this.leanBackground) {
         ctx.save();
-        if (this.transformMatrix) {
-            ctx.transform.apply(ctx, this.transformMatrix);
-        }
-        this.transform(ctx);
-        this._setShadow(ctx);
-
-        // styles and layout for tables
-        if (this instanceof fabric.Table) {
-            this.renderTableCustomBackground(ctx);
-            this.renderTableBorders(ctx);
-        }
-        else {
-            this.renderGroupBackground(ctx);
-        }
-
-        this.clipTo && fabric.util.clipContext(this, ctx);
-        // the array is now sorted in order of highest first, so start from end
-        for (var i = 0, len = this._objects.length; i < len; i++) {
-            this._renderObject(this._objects[i], ctx);
-        }
-
-        this.clipTo && ctx.restore();
+        ctx.fillStyle = this.backgroundColor;
+        ctx.beginPath();
+        var offset = this.leanBackgroundOffset / 4,
+            slant = this.leanBackgroundOffset / 2,
+            yFix = this.leanBackgroundOffset / 10;
+        ctx.moveTo(-this.width / 2 + offset, -this.height / 2 - yFix);
+        ctx.lineTo(-this.width / 2 + this.width + offset, -this.height / 2 - yFix);
+        ctx.lineTo(-this.width / 2 + this.width - slant + offset, -this.height / 2 + this.height - yFix);
+        ctx.lineTo(-this.width / 2 - slant + offset, -this.height / 2 + this.height - yFix);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      else {
+        ctx.save();
+        ctx.fillStyle = this.backgroundColor;
+        ctx.fillRect(
+            -this.width / 2,
+            -this.height / 2,
+            this.width,
+            this.height
+        );
 
         ctx.restore();
-
-        this._transformDone = false;
+      }
     },
+
     /**
      * Decide if the object should cache or not. Create its own cache level
      * objectCaching is a global flag, wins over everything
@@ -350,8 +384,10 @@
             return false;
           }
         }
+      }
       return ownCache;
     },
+
     /**
      * Check if this object or a child object will cast a shadow
      * @return {Boolean}
@@ -367,48 +403,15 @@
       }
       return false;
     },
+
     /**
      * Check if this group or its parent group are caching, recursively up
      * @return {Boolean}
      */
     isOnACache: function() {
       return this.ownCaching || (this.group && this.group.isOnACache());
-    /**
-     * Renders background color for groups
-     * @param ctx Context to render on
-     */
-    renderGroupBackground: function(ctx) {
-      if (!this.backgroundColor) {
-        return;
-      }
-
-      if (this.leanBackground) {
-        ctx.save();
-        ctx.fillStyle = this.backgroundColor;
-        ctx.beginPath();
-        var offset = this.leanBackgroundOffset/4,
-            slant = this.leanBackgroundOffset/2,
-            yFix = this.leanBackgroundOffset/10;
-        ctx.moveTo(-this.width/2 + offset, -this.height/2 - yFix);
-        ctx.lineTo(-this.width/2 + this.width + offset, -this.height/2 - yFix);
-        ctx.lineTo(-this.width/2 + this.width - slant + offset, -this.height/2 + this.height - yFix);
-        ctx.lineTo(-this.width/2 - slant + offset, -this.height/2 + this.height - yFix);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      }
-      else {
-        ctx.save();
-        ctx.fillStyle = this.backgroundColor;
-        ctx.fillRect(
-            -this.width / 2,
-            -this.height / 2,
-            this.width,
-            this.height
-        );
-        ctx.restore();
-      }
     },
+
     /**
      * Execute the drawing operation for an object on a specified context
      * @param {CanvasRenderingContext2D} ctx Context to render on
@@ -487,36 +490,6 @@
       object.setCoords();
       delete object.group;
       return this;
-    },
-
-    /**
-     * @private
-     */
-    _setObjectPosition: function(object) {
-      var center = this.getCenterPoint(),
-          rotated = this._getRotatedLeftTop(object);
-
-      object.set({
-        angle: object.getAngle() + this.getAngle(),
-        left: center.x + rotated.left,
-        top: center.y + rotated.top,
-        scaleX: object.get('scaleX') * this.get('scaleX'),
-        scaleY: object.get('scaleY') * this.get('scaleY')
-      });
-    },
-
-    /**
-     * @private
-     */
-    _getRotatedLeftTop: function(object) {
-      var groupAngle = this.getAngle() * (Math.PI / 180);
-      return {
-        left: (-Math.sin(groupAngle) * object.getTop() * this.get('scaleY') +
-                Math.cos(groupAngle) * object.getLeft() * this.get('scaleX')),
-
-        top:  (Math.cos(groupAngle) * object.getTop() * this.get('scaleY') +
-               Math.sin(groupAngle) * object.getLeft() * this.get('scaleX'))
-      };
     },
 
     /**

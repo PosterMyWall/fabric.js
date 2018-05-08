@@ -448,6 +448,7 @@
     groupSVGElements: function(elements, options, path) {
       var object;
       if (elements.length === 1) {
+        elements[0].set(options);
         return elements[0];
       }
       if (options) {
@@ -463,6 +464,25 @@
         }
       }
       object = new fabric.Group(elements, options);
+      if (typeof path !== 'undefined') {
+        object.sourcePath = path;
+      }
+      return object;
+    },
+
+    /**
+     * Groups SVG elements (usually those retrieved from SVG document)
+     * @static
+     * @memberOf fabric.util
+     * @param {Array} elements SVG elements to group
+     * @param {Object} [options] Options object
+     * @return {fabric.Object|fabric.PathGroup}
+     */
+    groupSVGElementsForPathGroup: function (elements, options, path) {
+      var object;
+
+      object = new fabric.PathGroup(elements, options);
+
       if (typeof path !== 'undefined') {
         object.sourcePath = path;
       }

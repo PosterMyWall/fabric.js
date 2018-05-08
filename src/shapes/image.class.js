@@ -406,6 +406,7 @@
 
       filters = filters || this.filters || [];
       filters = filters.filter(function(filter) { return filter; });
+
       if (filters.length === 0) {
         this._element = this._originalElement;
         this._filteredEl = null;
@@ -417,6 +418,10 @@
       var imgElement = this._originalElement,
           sourceWidth = imgElement.naturalWidth || imgElement.width,
           sourceHeight = imgElement.naturalHeight || imgElement.height;
+
+      if (imgElement.nodeName === 'VIDEO') {
+        return this;
+      }
 
       if (this._element === this._originalElement) {
         // if the element is the same we need to create a new element
@@ -443,6 +448,10 @@
       return this;
     },
 
+    hasFilters: function () {
+      return (this.filters.length > 0)
+    },
+
     /**
      * @private
      * @param {CanvasRenderingContext2D} ctx Context to render on
@@ -457,36 +466,98 @@
       this._renderPaintInOrder(ctx);
     },
 
-    _renderFill: function(ctx) {
+    // _renderFill: function(ctx) {
+    //   var w = this.width, h = this.height, sW = w * this._filterScalingX, sH = h * this._filterScalingY,
+    //       x = -w / 2, y = -h / 2, elementToDraw;
+    //
+    //   if (this._element.nodeName === 'VIDEO') {
+    //     elementToDraw = this._applyVideoFilter(this._element);
+    //   } else {
+    //     elementToDraw = this._element;
+    //   }
+    //
+    //   elementToDraw && ctx.drawImage(elementToDraw,
+    //     this.cropX * this._filterScalingX,
+    //     this.cropY * this._filterScalingY,
+    //     sW,
+    //     sH,
+    //     x, y, w, h);
+    // },
+
+    _renderFill: function (ctx) {
       var w = this.width, h = this.height, sW = w * this._filterScalingX, sH = h * this._filterScalingY,
-          x = -w / 2, y = -h / 2, elementToDraw = this._element;
-      elementToDraw && ctx.drawImage(elementToDraw,
-        this.cropX * this._filterScalingX,
-        this.cropY * this._filterScalingY,
-        sW,
-        sH,
-        x, y, w, h);
+          x = -w / 2, y = -h / 2, elementToDraw;
+
+      if (this._element.nodeName === 'VIDEO') {
+        elementToDraw = this._applyVideoFilter(this._element);
+      } else {
+        elementToDraw = this._element;
+      }
+
+      if (!this.cropX && !this.cropY) {
+        elementToDraw && ctx.drawImage(elementToDraw, x, y, w, h);
+      }
+      else {
+        elementToDraw && ctx.drawImage(elementToDraw,
+            this.cropX * this._filterScalingX,
+            this.cropY * this._filterScalingY,
+            sW,
+            sH,
+            x, y, w, h);
+      }
     },
-      /**
-       * Applies filter of video element
-       * @param elementToDraw
-       * @return {*|CanvasElement}
-       * @private
-       */
-      _applyVideoFilter: function (elementToDraw) {
-          var videoEl = elementToDraw,
-              canvasEl = fabric.util.createCanvasElement();
 
-          canvasEl.width = videoEl.width;
-          canvasEl.height = videoEl.height;
-          canvasEl.getContext('2d').drawImage(videoEl, 0, 0, videoEl.width, videoEl.height);
+    /**
+     * Applies filter of video element using webgl backend
+     * @param elementToDraw
+     * @return {*|CanvasElement}
+     * @private
+     */
+    _applyVideoFilter: function (elementToDraw) {
+      var filters = this.filters || [];
+      filters = filters.filter(function (filter) {
+        return filter;
+      });
 
-          this.filters.forEach(function (filter) {
-              filter && filter.applyTo(canvasEl);
-          });
+      if (filters.length === 0) {
+        this._element = this._originalElement;
+        this._filteredEl = null;
+        this._filterScalingX = 1;
+        this._filterScalingY = 1;
+        return this._element;
+      }
 
-          return canvasEl;
-      },
+      var videoEl = elementToDraw,
+          sourceWidth = videoEl.naturalWidth || videoEl.width,
+          sourceHeight = videoEl.naturalHeight || videoEl.height;
+
+      if (this._element === videoEl) {
+        // if the element is the same we need to create a new element
+        var canvasEl = fabric.util.createCanvasElement();
+        canvasEl.width = sourceWidth;
+        canvasEl.height = sourceHeight;
+        this._element = canvasEl;
+        this._filteredEl = canvasEl;
+      }
+      else {
+        // clear the existing element to get new filter data
+        this._element.getContext('2d').clearRect(0, 0, sourceWidth, sourceHeight);
+      }
+
+      if (!fabric.filterBackend) {
+        fabric.filterBackend = fabric.initFilterBackend();
+      }
+
+      fabric.filterBackend.applyFilters(filters, this._originalElement, sourceWidth, sourceHeight, this._element, false);
+      if (this._originalElement.width !== this._element.width ||
+          this._originalElement.height !== this._element.height) {
+        this._filterScalingX = this._element.width / this._originalElement.width;
+        this._filterScalingY = this._element.height / this._originalElement.height;
+      }
+      this._element = videoEl;
+      return canvasEl;
+    },
+
     /**
      * @private, needed to check if image needs resize
      */
@@ -646,10 +717,11 @@
   /**
    * Creates an instance of fabric.Image from its object representation
    * @static
-   * @param {Object} object Object to create an instance from
+   * @param {Object} _object Object to create an instance from
    * @param {Function} callback Callback to invoke when an image instance is created
    */
-  fabric.Image.fromObject = function(object, callback) {
+  fabric.Image.fromObject = function (_object, callback) {
+    var object = fabric.util.object.clone(_object);
     fabric.util.loadImage(object.src, function(img, error) {
       if (error) {
         callback && callback(null, error);

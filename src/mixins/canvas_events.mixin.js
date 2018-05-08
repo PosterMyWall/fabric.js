@@ -207,15 +207,6 @@
 
     /**
      * @private
-     * @param {Event} [e] Event object fired on Event.js shake
-     * @param {Event} [self] Inner Event object
-     */
-    _onDoubleTap: function(e, self) {
-      this.__onDoubleTap && this.__onDoubleTap(e, self);
-    },
-    
-    /**
-     * @private
      * @param {Event} e Event object fired on mousedown
      */
     _onContextMenu: function (e) {
@@ -224,6 +215,15 @@
         e.preventDefault();
       }
       return false;
+    },
+
+    /**
+     * @private
+     * @param {Event} [e] Event object fired on Event.js shake
+     * @param {Event} [self] Inner Event object
+     */
+    _onDoubleTap: function (e, self) {
+      this.__onDoubleTap && this.__onDoubleTap(e, self);
     },
 
     /**
@@ -324,7 +324,7 @@
         (pointer &&
           this._previousPointer &&
           this.selection && (
-          pointer.x !== this._previousPointer.x ||
+        pointer.x !== this._previousPointer.x ||
           pointer.y !== this._previousPointer.y))
       );
     },
@@ -385,9 +385,9 @@
         target.isMoving = false;
       }
       this._setCursorFromEvent(e, target);
+      shouldRender && this.requestRenderAll();
       this._handleEvent(e, 'up', target ? target : null, LEFT_CLICK, isClick);
       target && (target.__corner = 0);
-      shouldRender && this.requestRenderAll();
     },
 
     /**
@@ -442,8 +442,6 @@
         }
 
       }
-
-      this._restoreOriginXY(target);
     },
 
     /**
@@ -601,6 +599,11 @@
       if(c === 'btn') {
         target.fire('btn:clicked', {target: target, e: e});
       }
+
+      if (target !== this.getActiveObject()) {
+        this.deactivateAll();
+        this.setActiveObject(target, e);
+      }
     },
 
     /**
@@ -755,7 +758,7 @@
       this._beforeScaleTransform(e, transform);
       this._performTransformAction(e, transform, pointer);
 
-      transform.actionPerformed && this.requestRenderAll();
+      transform.actionPerformed && this.renderAll();
       transform.target._renderTransformDetail(transform);
 
     },
@@ -775,9 +778,11 @@
       }
       else if (action === 'scale' && transform.corner === 'pmwBtnMr') {
         this._fire('pmwBtnMr:modifyingWidth', target, e);
+        actionPerformed = true;
       }
       else if (action === 'scale' && transform.corner === 'pmwBtnMl') {
         this._fire('pmwBtnMl:modifyingWidth', target, e);
+        actionPerformed = true;
       }
       else if (action === 'scale') {
         (actionPerformed = this._onScale(e, transform, x, y)) && this._fire('scaling', target, e);
@@ -894,31 +899,6 @@
     /**
      * @private
      */
-    _setCornerCursor: function(corner, target, e) {
-      if (corner in cursorOffset) {
-        this.setCursor(this._getRotatedCornerCursor(corner, target, e));
-      }
-      else if (corner === 'mtr' && target.hasRotatingPoint) {
-        this.setCursor(this.rotationCursor);
-      }
-      else if (corner === 'btn') {
-        this.setCursor('pointer');
-      }
-      else if (corner === 'pmwBtnMr') {
-        this.setCursor('e-resize');
-      }
-      else if (corner === 'pmwBtnMl') {
-        this.setCursor('w-resize');
-      }
-      else {
-        this.setCursor(this.defaultCursor);
-        return false;
-      }
-    },
-
-    /**
-     * @private
-     */
     getCornerCursor: function(corner, target, e) {
       if (this.actionIsDisabled(corner, target, e)) {
         return this.notAllowedCursor;
@@ -928,6 +908,15 @@
       }
       else if (corner === 'mtr' && target.hasRotatingPoint) {
         return this.rotationCursor;
+      }
+      else if (corner === 'btn') {
+        return 'pointer';
+      }
+      else if (corner === 'pmwBtnMr') {
+        return 'e-resize';
+      }
+      else if (corner === 'pmwBtnMl') {
+        return 'w-resize';
       }
       else {
         return this.defaultCursor;

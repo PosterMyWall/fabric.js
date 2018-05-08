@@ -106,11 +106,56 @@
       }
       else if (group.length > 1) {
         aGroup = new fabric.ActiveSelection(group.reverse(), {
-          canvas: this
+          canvas: this,
+          snapAngle: 45,
+          snapThreshold: 3
         });
         this.setActiveObject(aGroup, e);
       }
     },
+
+    _groupObjects: function (e, objects) {
+      var group = objects,
+          aGroup;
+
+      // do not create group for 1 element only
+      if (group.length === 1) {
+        this.setActiveObject(group[0], e);
+      }
+      else if (group.length > 1) {
+        aGroup = new fabric.ActiveSelection(group.reverse(), {
+          canvas: this,
+          snapAngle: 45,
+          snapThreshold: 3
+        });
+        this.setActiveObject(aGroup, e);
+      }
+    },
+
+
+//     /**
+//      * @private
+//      * @param {Event} e mouse event
+//      */
+//     _groupObjects: function (e, objects) {
+// // do not create group for 1 element only
+// //       console.log(objects[0].left, objects[0].top);
+// //       console.log(objects[1].left, objects[1].top);
+//       console.log(objects);
+//       if (objects.length === 1) {
+//         this.setActiveObject(objects[0], e);
+//       }
+//       else if (objects.length > 1) {
+//         var group = new fabric.Group(objects.reverse(), {canvas: this,
+//           cornerStrokeColor: 'rgba(98,255,231,1)'
+//         });
+//         group.toActiveSelection();
+//         group.addWithUpdate();
+//         // this.setActiveObject(group, e);
+//         // this.fire('selection:created', {target: group});
+//         this.requestRenderAll();
+//       }
+//     },
 
     /**
      * @private
@@ -134,53 +179,61 @@
           continue;
         }
 
-        if (((allowIntersect && currentObject.intersectsWithRect(selectionX1Y1, selectionX2Y2)) || 
-                currentObject.isContainedWithinRect(selectionX1Y1, selectionX2Y2) || 
-                (allowIntersect && currentObject.containsPoint(selectionX1Y1)) || 
+        if (((allowIntersect && currentObject.intersectsWithRect(selectionX1Y1, selectionX2Y2)) ||
+                currentObject.isContainedWithinRect(selectionX1Y1, selectionX2Y2) ||
+                (allowIntersect && currentObject.containsPoint(selectionX1Y1)) ||
                 (allowIntersect && currentObject.containsPoint(selectionX2Y2))
-            ) &&
-            !(currentObject.lockMovementX && currentObject.lockMovementY && 
-            currentObject.lockScalingX && currentObject.lockScalingY && 
+            ) && !(currentObject.lockMovementX && currentObject.lockMovementY &&
+            currentObject.lockScalingX && currentObject.lockScalingY &&
             currentObject.lockRotation)) {
-            group.push(currentObject);
+          group.push(currentObject);
 
-            // only add one object if it's a click
-            if (isClick) {
-                break;
-            }
+          // only add one object if it's a click
+          if (isClick) {
+            break;
+          }
         }
       }
 
       return group;
     },
-      /**
-       * 
-       * @private
-       */
-    _setCoordsOfActiveGroup: function () {
-        var activeGroup = this.getActiveGroup();
-        if (activeGroup) {
-            activeGroup.setObjectsCoords().setCoords();
-            activeGroup.isMoving = false;
-            this.setCursor(this.defaultCursor);
-        }
 
-        // clear selection and current transformation
-        this._groupSelector = null;
-        this._currentTransform = null;
+    /**
+     * @private
+     */
+    _setCoordsOfActiveGroup: function () {
+      var activeGroup = this.getActiveObject();
+      if (activeGroup && activeGroup.type == 'group') {
+        activeGroup.setObjectsCoords().setCoords();
+        activeGroup.isMoving = false;
+        this.setCursor(this.defaultCursor);
+      }
+
+      // clear selection and current transformation
+      this._groupSelector = null;
+      this._currentTransform = null;
     },
     /**
      * @private
      */
+    // _maybeGroupObjects: function (e) {
+    //   if (this.selection && this._groupSelector) {
+    //     var objects = this._collectObjects();
+    //     this._groupObjects(e, objects);
+    //   }
+    //   this._setCoordsOfActiveGroup();
+    // }
+    /**
+     * @private
+     */
     _maybeGroupObjects: function(e) {
-        if (this.selection && this._groupSelector) {
-            this._groupSelectedObjects(e);
-        }
-        this._setCoordsOfActiveGroup();
-        this.setCursor(this.defaultCursor);
-        // clear selection and current transformation
-        this._groupSelector = null;
-        this._currentTransform = null;
+      if (this.selection && this._groupSelector) {
+        this._groupSelectedObjects(e);
+      }
+      this.setCursor(this.defaultCursor);
+      // clear selection and current transformation
+      this._groupSelector = null;
+      this._currentTransform = null;
     }
   });
 

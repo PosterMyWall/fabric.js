@@ -37,10 +37,7 @@
       'charSpacing',
       'textAlign',
       'styles',
-      'stroke',
-      'strokeWidth',
-      'letterSpacing'
-  },
+    ],
 
     /**
      * @private
@@ -74,13 +71,6 @@
      * @default
      */
     type:                 'text',
-
-    /**
-     * Letter spacing (in pixels)
-     * @type Number
-     * @default
-     */
-    letterSpacing:        0,
 
     /**
      * Font size (in pixels)
@@ -474,9 +464,6 @@
     },
 
     /**
-     * Changes made to the 'justify' text alignment, so that it takes care of letter spacing.
-     * Changes made are for PosterMyWall.
-     * Add changes again for letterspacing support
      * @private
      * @param {String} method Method name ("fillText" or "strokeText")
      * @param {CanvasRenderingContext2D} ctx Context to render on
@@ -764,7 +751,8 @@
       var lineHeight, height = 0;
       for (var i = 0, len = this._textLines.length; i < len; i++) {
         lineHeight = this.getHeightOfLine(i);
-        height += (i === len - 1 ? lineHeight / this.lineHeight : lineHeight);
+        //pmw change: commenting out the code that prevent text box from applying line height on the last line
+        height += lineHeight;//(i === len - 1 ? lineHeight / this.lineHeight : lineHeight);
       }
       return height;
     },
@@ -1036,10 +1024,10 @@
     },
 
     _getWidthOfCharSpacing: function() {
-      if (this.charSpacing !== 0) {
-        return this.fontSize * this.charSpacing / 1000;
-      }
-      return 0;
+      // if (this.charSpacing !== 0) {
+      //   return this.fontSize * this.charSpacing / 1000;
+      // }
+      return this.charSpacing;
     },
 
     /**

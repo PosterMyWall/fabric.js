@@ -263,24 +263,6 @@
     },
 
     /**
-     * Returns width of an object's bounding rectangle
-     * @deprecated since 1.0.4
-     * @return {Number} width value
-     */
-    getBoundingRectWidth: function() {
-      return this.getBoundingRect().width;
-    },
-
-    /**
-     * Returns height of an object's bounding rectangle
-     * @deprecated since 1.0.4
-     * @return {Number} height value
-     */
-    getBoundingRectHeight: function() {
-      return this.getBoundingRect().height;
-    },
-
-    /**
      * Returns coordinates of object's bounding rectangle (left, top, width, height)
      * the box is intented as aligned to axis of canvas.
      * @param {Boolean} [absolute] use coordinates without viewportTransform
@@ -366,7 +348,7 @@
       var boundingRectFactor = this.getBoundingRect(absolute).height / this.getScaledHeight();
       return this.scale(value / this.height / boundingRectFactor);
     },
-    
+
     /**
      * Calculate and returns the .coords of an object.
      * @return {Object} Object with tl, tr, br, bl ....
@@ -425,8 +407,8 @@
         oCoords.mb = mb;
         // rotating point
         oCoords.mtr = mtr;
-      };
-      
+      }
+
       if(this.hasButton) {
         // In case replace button is pushed down due to overlapping of corners,
         // 50 is added to the currentHeight to ensure that selectable area of replace button is shifted accordingly.
@@ -442,7 +424,7 @@
         oCoords.pmwBtnMl = ml;
       }
 
-      return coords;
+      return oCoords;
     },
 
     /**

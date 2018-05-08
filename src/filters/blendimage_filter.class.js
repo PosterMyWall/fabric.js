@@ -52,8 +52,8 @@
       'varying vec2 vTexCoord2;\n' +
       'uniform mat3 uTransformMatrix;\n' +
       'void main() {\n' +
-        'vTexCoord = aTexCoord;\n' +
-        'vTexCoord2 = (uTransformMatrix * vec3(aTexCoord, 1.0)).xy;\n' +
+    'vTexCoord = aPosition;\n' +
+    'vTexCoord2 = (uTransformMatrix * vec3(aPosition, 1.0)).xy;\n' +
         'gl_Position = vec4(aPosition * 2.0 - 1.0, 0.0, 1.0);\n' +
       '}',
 
@@ -150,6 +150,9 @@
 
       if (!resources.blendImage) {
         resources.blendImage = document.createElement('canvas');
+      }
+      else {
+        resources.blendImage.getContext('2d').clearRect(0, 0, width, height);
       }
       canvas1 = resources.blendImage;
       if (canvas1.width !== width || canvas1.height !== height) {

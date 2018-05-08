@@ -107,9 +107,9 @@
       }
 
       this.pathOffset = this.pathOffset || {
-        x: calcDim.left + this.width / 2,
-        y: calcDim.top + this.height / 2
-      };
+            x: calcDim.left + (this.width - this.strokeWidth) / 2,
+            y: calcDim.top + (this.height - this.strokeWidth) / 2
+          };
     },
 
     /**
@@ -416,11 +416,6 @@
         }
         previous = current;
       }
-      this._renderFill(ctx);
-      ctx.restore();
-      this._setStrokeStyles(ctx);
-      this._renderStroke(ctx);
-      ctx.save();
     },
 
     /**
@@ -432,6 +427,27 @@
       this._renderPaintInOrder(ctx);
     },
 
+    /**
+     * overriding this function for this class to prevent stroke of shapes getting effected by scaling the objects
+     * @private
+     * @param {CanvasRenderingContext2D} ctx Context to render on
+     */
+    _renderPaintInOrder: function (ctx) {
+      if (this.paintFirst === 'stroke') {
+        ctx.restore();
+        this._setStrokeStyles(ctx, this);
+        this._renderStroke(ctx);
+        ctx.save();
+        this._renderFill(ctx);
+      }
+      else {
+        this._renderFill(ctx);
+        ctx.restore();
+        this._setStrokeStyles(ctx, this);
+        this._renderStroke(ctx);
+        ctx.save();
+      }
+    },
     /**
      * Returns string representation of an instance
      * @return {String} string representation of an instance

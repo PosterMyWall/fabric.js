@@ -265,12 +265,13 @@
      * @default
      */
     isDrawingMode:          false,
-    
+
     /**
      * When true, alignment guides will appear while moving objects on canvas.
      * @type Boolean
      */
     areAlignmentGuidesEnabled:          true,
+
     /**
      * Indicates whether objects should remain in current stack position when selected.
      * When false objects are brought to top and rendered as part of the selection group
@@ -279,6 +280,9 @@
      */
     preserveObjectStacking: false,
 
+    /**
+     * These two props 'snapAngle' & 'snapThresHold' have been moved to object.class.js
+     */
     /**
      * Indicates the angle that an object will lock to while rotating.
      * @type Number
@@ -1049,16 +1053,10 @@
         hasRotated = false;
       }
       else {
-        // snap rotation angle at multiples of 90 degrees
-        var snap = angle % 90;
-        if(snap > 85 || snap < 5) {
-          angle = (Math.round(angle / 10) * 10);
-        }
-        t.target.angle = angle % 360;
+        t.target.angle = angle;
       }
 
       return hasRotated;
-      
     },
 
     /**
@@ -1500,14 +1498,6 @@
     },
 
     /**
-     * Returns currently active object
-     * @return {fabric.Object} active object
-     */
-    getActiveObject: function () {
-      return this._activeObject;
-    },
-
-    /**
      * @private
      * @param {Object} object to set as active
      * @param {Event} [e] Event (passed along when firing "object:selected")
@@ -1581,85 +1571,20 @@
     },
 
     /**
-     * Makes a group of given objects and sets it as active on canvas
-     * @param {Array} obbjects Array of fabric.Object to select as a group
+     * Makes an selection of given objects and sets it as active on canvas
+     * @param {Array} objects Array of fabric.Object to select as a group
      * @param {Event} [e] Event (passed along when firing "object:selected")
      */
-    setObjectsAsActiveGroup: function (objects, e) {
-      this.deactivateAll();
+    setObjectsAsActiveSelection: function (objects, e) {
+      this.discardActiveObject(e);
       this._groupObjects(e, objects);
-      this._setCoordsOfActiveGroup();
     },
-
-    /**
-     * Returns currently active group
-     * @return {fabric.Group} Current group
-     */
-    getActiveGroup: function () {
-      return this._activeGroup;
-    },
-
-    /**
-     * @private
-     */
-    _discardActiveGroup: function() {
-      var g = this.getActiveGroup();
-      if (g) {
-        g.destroy();
-      }
-      this.setActiveGroup(null);
-    },
-
-    /**
-     * Discards currently active group
-     * @return {fabric.Canvas} thisArg
-     */
-    discardActiveGroup: function (e) {
-      this.fire('before:selection:cleared', {target: e});
-      this._discardActiveGroup();
-      this.fire('selection:cleared', { e: e });
-      return this;
-    },
-
-    /**
-     * Deactivates all objects on canvas, removing any active group or object
-     * @return {fabric.Canvas} thisArg
-     */
-    deactivateAll: function () {
-      var allObjects = this.getObjects(),
-          i = 0,
-          len = allObjects.length;
-      for ( ; i < len; i++) {
-        allObjects[i].set('active', false);
-      }
-      this._discardActiveGroup();
-      this._discardActiveObject();
-      return this;
-    },
-
-    /**
-     * Deactivates all objects and dispatches appropriate events
-     * @return {fabric.Canvas} thisArg
-     */
-    deactivateAllWithDispatch: function (e) {
-      var activeObject = this.getActiveGroup() || this.getActiveObject();
-      if (activeObject) {
-        this.fire('before:selection:cleared', { target: activeObject, e: e });
-      }
-      this.deactivateAll();
-      if (activeObject) {
-        this.fire('selection:cleared', { e: e });
-      }
-      return this;
-    },
-
     /**
      * Clears all contexts (background, main, top) of an instance
      * @return {fabric.Canvas} thisArg
      * @chainable
      */
     clear: function () {
-      // this.discardActiveGroup();
       this.discardActiveObject();
       this.clearContext(this.contextTop);
       return this.callSuper('clear');
@@ -1717,23 +1642,25 @@
     /**
      * Restores the changed properties of instance
      * @private
+     * @param {fabric.Object} [instance] the object to un-transform (gets mutated)
+     * @param {Object} [originalValues] the original values of instance, as returned by _realizeGroupTransformOnObject
      */
-    _drawGroupControls: function(ctx, activeGroup) {
-      activeGroup._renderControls(ctx);
+    _unwindGroupTransformOnObject: function (instance, originalValues) {
+      if (originalValues) {
+        instance.set(originalValues);
+      }
     },
 
     /**
      * @private
      */
-    _drawObjectsControls: function(ctx) {
-      for (var i = 0, len = this._objects.length; i < len; ++i) {
-        if (!this._objects[i] || !this._objects[i].active) {
-          continue;
-        }
-        this._objects[i]._renderControls(ctx);
-        this.lastRenderedObjectWithControlsAboveOverlay = this._objects[i];
-      }
-    }
+    _setSVGObject: function (markup, instance, reviver) {
+      //If the object is in a selection group, simulate what would happen to that
+      //object when the group is deselected
+      var originalProperties = this._realizeGroupTransformOnObject(instance);
+      this.callSuper('_setSVGObject', markup, instance, reviver);
+      this._unwindGroupTransformOnObject(instance, originalProperties);
+    },
   });
 
   // copying static properties manually to work around Opera's bug,
@@ -1748,12 +1675,4 @@
     /** @ignore */
     fabric.Canvas.prototype._setCursorFromEvent = function() { };
   }
-
-  /**
-   * @class fabric.Element
-   * @alias fabric.Canvas
-   * @deprecated Use {@link fabric.Canvas} instead.
-   * @constructor
-   */
-  fabric.Element = fabric.Canvas;
 })();

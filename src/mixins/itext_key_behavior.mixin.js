@@ -189,12 +189,16 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
       }
     }
     if (insertedText.length) {
-      if (fromPaste && insertedText.join('') === fabric.copiedText) {
-        this.insertNewStyleBlock(insertedText, this.selectionStart, fabric.copiedTextStyle);
-      }
-      else {
+      /*
+       PMW: Commenting out this if statement below as we are not supporting different styles on different text within
+       the same textbox
+       */
+      // if (fromPaste && insertedText.join('') === fabric.copiedText) {
+      //   this.insertNewStyleBlock(insertedText, this.selectionStart, fabric.copiedTextStyle);
+      // }
+      // else {
         this.insertNewStyleBlock(insertedText, this.selectionStart);
-      }
+      // }
     }
     this.updateFromTextArea();
     this.fire('changed');

@@ -2,7 +2,9 @@
 
   'use strict';
 
-  var fabric  = global.fabric || (global.fabric = { });
+  var fabric = global.fabric || (global.fabric = {}),
+      filters = fabric.Image.filters,
+      createClass = fabric.util.createClass;
 
   /**
    * Sepia2 filter class
@@ -15,7 +17,7 @@
    * object.filters.push(filter);
    * object.applyFilters(canvas.renderAll.bind(canvas));
    */
-  fabric.Image.filters.Sepia2 = fabric.util.createClass(fabric.Image.filters.BaseFilter, /** @lends fabric.Image.filters.Sepia2.prototype */ {
+  filters.Sepia2 = createClass(fabric.Image.filters.BaseFilter, /** @lends fabric.Image.filters.Sepia2.prototype */ {
 
     /**
      * Filter type
@@ -54,8 +56,10 @@
    * @static
    * @return {fabric.Image.filters.Sepia2} Instance of fabric.Image.filters.Sepia2
    */
-  fabric.Image.filters.Sepia2.fromObject = function() {
-    return new fabric.Image.filters.Sepia2();
-  };
+  // fabric.Image.filters.Sepia2.fromObject = function() {
+  //   return new fabric.Image.filters.Sepia2();
+  // };
+  fabric.Image.filters.Sepia2.fromObject = fabric.Image.filters.BaseFilter.fromObject;
+
 
 })(typeof exports !== 'undefined' ? exports : this);
