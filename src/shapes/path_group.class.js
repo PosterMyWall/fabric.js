@@ -136,7 +136,7 @@
                 height = (this.height + this.paths[0].strokeWidth) * this.scaleY,
 
                 tl, tr, bl, br,
-            // coordinates of the center point
+                // coordinates of the center point
                 x = center.x,
                 y = center.y,
                 theta = fabric.util.degreesToRadians(angle);
@@ -151,37 +151,46 @@
                 _hypotenuse = (width / Math.cos(_angle)) / 2,
                 offsetX, offsetY;
 
-            if (this.flipY != this.flipX) {
-                offsetY = Math.cos(_angle + theta) * _hypotenuse;
-                offsetX = Math.sin(_angle + theta) * _hypotenuse;
+
+            var relativeAngle, directionX, directionY;
+            if (this.flipX === false && this.flipY === false) {
+                relativeAngle = _angle + theta;
+                directionX = directionY = -1;
             }
-            else {
-                offsetX = Math.cos(_angle + theta) * _hypotenuse;
-                offsetY = Math.sin(_angle + theta) * _hypotenuse;
+            else if (this.flipX === true && this.flipY === true) {
+                relativeAngle = _angle + theta;
+                directionX = directionY = 1;
+            }
+            else if (this.flipX === true && this.flipY === false) {
+                relativeAngle = theta - _angle;
+                directionX = directionY = 1;
+            } else if (this.flipX === false && this.flipY === true) {
+                relativeAngle = theta - _angle;
+                directionX = directionY = -1;
             }
 
-            offsetY *= (this.flipY ? -1 : 1);
-            offsetX *= (this.flipX ? -1 : 1);
+            offsetX = Math.cos(relativeAngle) * _hypotenuse * directionX;
+            offsetY = Math.sin(relativeAngle) * _hypotenuse * directionY;
 
 
             tl = {
-                x: x - offsetX,
-                y: y - offsetY
-            };
-
-            tr = {
-                x: (x - offsetX) + (width * cosTh),
-                y: (y - offsetY) + (width * sinTh)
-            };
-
-            br = {
                 x: x + offsetX,
                 y: y + offsetY
             };
 
+            tr = {
+                x: (x + offsetX) + (width * cosTh),
+                y: (y + offsetY) + (width * sinTh)
+            };
+
+            br = {
+                x: x - offsetX,
+                y: y - offsetY
+            };
+
             bl = {
-                x: (x - offsetX) - (height * sinTh),
-                y: (y - offsetY) + (height * cosTh)
+                x: (x + offsetX) - (height * sinTh),
+                y: (y + offsetY) + (height * cosTh)
             };
             return {
                 tl: tl,
