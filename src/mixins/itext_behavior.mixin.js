@@ -15,10 +15,9 @@
       this.mouseMoveHandler = this.mouseMoveHandler.bind(this);
     },
 
-    onDeselect: function(options) {
+      onDeselect: function () {
       this.isEditing && this.exitEditing();
       this.selected = false;
-      fabric.Object.prototype.onDeselect.call(this, options);
     },
 
     /**
@@ -59,13 +58,13 @@
      * @private
      */
     _initCanvasHandlers: function(canvas) {
-      canvas._mouseUpITextHandler = (function() {
+        canvas._mouseUpITextHandler = function () {
         if (canvas._iTextInstances) {
           canvas._iTextInstances.forEach(function(obj) {
             obj.__isMousedown = false;
           });
         }
-      }).bind(this);
+        };
       canvas.on('mouse:up', canvas._mouseUpITextHandler);
     },
 
@@ -333,6 +332,7 @@
       }
 
       if (this.canvas) {
+          this.canvas.calcOffset();
         this.exitEditingOnOthers(this.canvas);
       }
 
@@ -524,11 +524,17 @@
             y: boundaries.top + boundaries.topOffset + charHeight
           },
           upperCanvas = this.canvas.upperCanvasEl,
-          maxWidth = upperCanvas.width - charHeight,
-          maxHeight = upperCanvas.height - charHeight;
+          upperCanvasWidth = upperCanvas.width,
+          upperCanvasHeight = upperCanvas.height,
+          maxWidth = upperCanvasWidth - charHeight,
+          maxHeight = upperCanvasHeight - charHeight,
+          scaleX = upperCanvas.clientWidth / upperCanvasWidth,
+          scaleY = upperCanvas.clientHeight / upperCanvasHeight;
 
       p = fabric.util.transformPoint(p, m);
       p = fabric.util.transformPoint(p, this.canvas.viewportTransform);
+        p.x *= scaleX;
+        p.y *= scaleY;
       if (p.x < 0) {
         p.x = 0;
       }

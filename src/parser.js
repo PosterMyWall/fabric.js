@@ -15,10 +15,10 @@
       multiplyTransformMatrices = fabric.util.multiplyTransformMatrices,
 
       svgValidTagNames = ['path', 'circle', 'polygon', 'polyline', 'ellipse', 'rect', 'line',
-        'image', 'text', 'linearGradient', 'radialGradient', 'stop'],
+          'image', 'text'],
       svgViewBoxElements = ['symbol', 'image', 'marker', 'pattern', 'view', 'svg'],
       svgInvalidAncestors = ['pattern', 'defs', 'symbol', 'metadata', 'clipPath', 'mask', 'desc'],
-      svgValidParents = ['symbol', 'g', 'a', 'svg'],
+      svgValidParents = ['symbol', 'g', 'a', 'svg', 'clipPath', 'defs'],
 
       attributesMap = {
         cx:                   'left',
@@ -35,6 +35,7 @@
         'font-size':          'fontSize',
         'font-style':         'fontStyle',
         'font-weight':        'fontWeight',
+          'letter-spacing': 'charSpacing',
         'paint-order':        'paintFirst',
         'stroke-dasharray':   'strokeDashArray',
         'stroke-linecap':     'strokeLineCap',
@@ -44,7 +45,9 @@
         'stroke-width':       'strokeWidth',
         'text-decoration':    'textDecoration',
         'text-anchor':        'textAnchor',
-        opacity:              'opacity'
+          opacity: 'opacity',
+          'clip-path': 'clipPath',
+          'clip-rule': 'clipRule',
       },
 
       colorAttributes = {
@@ -59,6 +62,7 @@
 
   fabric.cssRules = { };
   fabric.gradientDefs = { };
+    fabric.clipPaths = {};
 
   function normalizeAttr(attr) {
     // transform attribute names
@@ -110,19 +114,23 @@
     else if (attr === 'textAnchor' /* text-anchor */) {
       value = value === 'start' ? 'left' : value === 'end' ? 'right' : 'center';
     }
+    else if (attr === 'charSpacing') {
+        // parseUnit returns px and we convert it to em
+        parsed = parseUnit(value, fontSize) / fontSize * 1000;
+    }
     else if (attr === 'paintFirst') {
-      var fillIndex = value.indexOf('fill');
-      var strokeIndex = value.indexOf('stroke');
-      var value = 'fill';
-      if (fillIndex > -1 && strokeIndex > -1 && strokeIndex < fillIndex) {
-        value = 'stroke';
-      }
-      else if (fillIndex === -1 && strokeIndex > -1) {
-        value = 'stroke';
-      }
+        var fillIndex = value.indexOf('fill');
+        var strokeIndex = value.indexOf('stroke');
+        var value = 'fill';
+        if (fillIndex > -1 && strokeIndex > -1 && strokeIndex < fillIndex) {
+            value = 'stroke';
+        }
+        else if (fillIndex === -1 && strokeIndex > -1) {
+            value = 'stroke';
+        }
     }
     else {
-      parsed = isArray ? value.map(parseUnit) : parseUnit(value, fontSize);
+        parsed = isArray ? value.map(parseUnit) : parseUnit(value, fontSize);
     }
 
     return (!isArray && isNaN(parsed) ? value : parsed);
@@ -186,7 +194,7 @@
    */
   fabric.parseTransformAttribute = (function() {
     function rotateMatrix(matrix, args) {
-      var cos = Math.cos(args[0]), sin = Math.sin(args[0]),
+        var cos = fabric.util.cos(args[0]), sin = fabric.util.sin(args[0]),
           x = 0, y = 0;
       if (args.length === 3) {
         x = args[1];
@@ -459,7 +467,7 @@
 
     while (nodelist.length && i < nodelist.length) {
       var el = nodelist[i],
-          xlink = el.getAttribute('xlink:href').substr(1),
+          xlink = (el.getAttribute('xlink:href') || el.getAttribute('href')).substr(1),
           x = el.getAttribute('x') || 0,
           y = el.getAttribute('y') || 0,
           el2 = elementById(doc, xlink).cloneNode(true),
@@ -482,7 +490,8 @@
 
       for (j = 0, attrs = el.attributes, len = attrs.length; j < len; j++) {
         attr = attrs.item(j);
-        if (attr.nodeName === 'x' || attr.nodeName === 'y' || attr.nodeName === 'xlink:href') {
+          if (attr.nodeName === 'x' || attr.nodeName === 'y' ||
+              attr.nodeName === 'xlink:href' || attr.nodeName === 'href') {
           continue;
         }
 
@@ -537,7 +546,7 @@
                            || !(viewBoxAttr = viewBoxAttr.match(reViewBoxAttrValue))),
         missingDimAttr = (!widthAttr || !heightAttr || widthAttr === '100%' || heightAttr === '100%'),
         toBeParsed = missingViewBox && missingDimAttr,
-        parsedDim = { }, translateMatrix = '';
+        parsedDim = {}, translateMatrix = '', widthDiff = 0, heightDiff = 0;
 
     parsedDim.width = 0;
     parsedDim.height = 0;
@@ -573,7 +582,28 @@
     preserveAspectRatio = fabric.util.parsePreserveAspectRatioAttribute(preserveAspectRatio);
     if (preserveAspectRatio.alignX !== 'none') {
       //translate all container for the effect of Mid, Min, Max
-      scaleY = scaleX = (scaleX > scaleY ? scaleY : scaleX);
+        if (preserveAspectRatio.meetOrSlice === 'meet') {
+            scaleY = scaleX = (scaleX > scaleY ? scaleY : scaleX);
+            // calculate additional translation to move the viewbox
+        }
+        if (preserveAspectRatio.meetOrSlice === 'slice') {
+            scaleY = scaleX = (scaleX > scaleY ? scaleX : scaleY);
+            // calculate additional translation to move the viewbox
+        }
+        widthDiff = parsedDim.width - viewBoxWidth * scaleX;
+        heightDiff = parsedDim.height - viewBoxHeight * scaleX;
+        if (preserveAspectRatio.alignX === 'Mid') {
+            widthDiff /= 2;
+        }
+        if (preserveAspectRatio.alignY === 'Mid') {
+            heightDiff /= 2;
+        }
+        if (preserveAspectRatio.alignX === 'Min') {
+            widthDiff = 0;
+        }
+        if (preserveAspectRatio.alignY === 'Min') {
+            heightDiff = 0;
+        }
     }
 
     if (scaleX === 1 && scaleY === 1 && minX === 0 && minY === 0 && x === 0 && y === 0) {
@@ -588,9 +618,9 @@
                   ' 0' +
                   ' 0 ' +
                   scaleY + ' ' +
-                  (minX * scaleX) + ' ' +
-                  (minY * scaleY) + ') ';
-
+        (minX * scaleX + widthDiff) + ' ' +
+        (minY * scaleY + heightDiff) + ') ';
+      parsedDim.viewboxTransform = fabric.parseTransformAttribute(matrix);
     if (element.nodeName === 'svg') {
       el = element.ownerDocument.createElement('g');
       // element.firstChild != null
@@ -603,7 +633,6 @@
       el = element;
       matrix = el.getAttribute('transform') + matrix;
     }
-
     el.setAttribute('transform', matrix);
     return parsedDim;
   }
@@ -664,13 +693,25 @@
       callback && callback([], {});
       return;
     }
-
+      var clipPaths = {};
+      descendants.filter(function (el) {
+          return el.nodeName.replace('svg:', '') === 'clipPath';
+      }).forEach(function (el) {
+          var id = el.getAttribute('id');
+          clipPaths[id] = fabric.util.toArray(el.getElementsByTagName('*')).filter(function (el) {
+              return fabric.svgValidTagNamesRegEx.test(el.nodeName.replace('svg:', ''));
+          });
+      });
     fabric.gradientDefs[svgUid] = fabric.getGradientDefs(doc);
     fabric.cssRules[svgUid] = fabric.getCSSRules(doc);
+      fabric.clipPaths[svgUid] = clipPaths;
     // Precedence of rules:   style > class > attribute
     fabric.parseElements(elements, function(instances, elements) {
       if (callback) {
         callback(instances, options, elements, descendants);
+          delete fabric.gradientDefs[svgUid];
+          delete fabric.cssRules[svgUid];
+          delete fabric.clipPaths[svgUid];
       }
     }, clone(options), reviver, parsingOptions);
   };
@@ -738,7 +779,6 @@
           elList = _getMultipleNodes(doc, tagArray),
           el, j = 0, id, xlink,
           gradientDefs = { }, idsToXlinkMap = { };
-
       j = elList.length;
 
       while (j--) {
@@ -787,8 +827,6 @@
       if (element.parentNode && fabric.svgValidParentsRegEx.test(element.parentNode.nodeName)) {
         parentAttributes = fabric.parseAttributes(element.parentNode, attributes, svgUid);
       }
-      fontSize = (parentAttributes && parentAttributes.fontSize ) ||
-                 element.getAttribute('font-size') || fabric.Text.DEFAULT_SVG_FONT_SIZE;
 
       var ownAttributes = attributes.reduce(function(memo, attr) {
         value = element.getAttribute(attr);
@@ -801,6 +839,9 @@
       // (see: http://www.w3.org/TR/SVG/styling.html#UsingPresentationAttributes)
       ownAttributes = extend(ownAttributes,
         extend(getGlobalStylesForElement(element, svgUid), fabric.parseStyleAttribute(element)));
+
+        fontSize = (parentAttributes && parentAttributes.fontSize) ||
+            ownAttributes['font-size'] || fabric.Text.DEFAULT_SVG_FONT_SIZE;
 
       var normalizedAttr, normalizedValue, normalizedStyle = {};
       for (var attr in ownAttributes) {
@@ -972,6 +1013,7 @@
         }
         if (!xml || !xml.documentElement) {
           callback && callback(null);
+            return false;
         }
 
         fabric.parseSVGDocument(xml.documentElement, function (results, _options, elements, allElements) {

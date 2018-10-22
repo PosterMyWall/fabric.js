@@ -55,9 +55,6 @@
      * @param {ImageData} options.imageData The Uint8Array to be filtered.
      */
     applyTo2d: function(options) {
-      if (!this.invert) {
-        return;
-      }
       var imageData = options.imageData,
           data = imageData.data, i,
           len = data.length;
@@ -67,6 +64,16 @@
         data[i + 2] = 255 - data[i + 2];
       }
     },
+
+      /**
+       * Invert filter isNeutralState implementation
+       * Used only in image applyFilters to discard filters that will not have an effect
+       * on the image
+       * @param {Object} options
+       **/
+      isNeutralState: function () {
+          return !this.invert;
+      },
 
     /**
      * Return WebGL uniform locations for this filter's shader.

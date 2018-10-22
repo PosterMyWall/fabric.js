@@ -8,6 +8,7 @@
       extend = fabric.util.object.extend,
       _toString = Object.prototype.toString,
       drawArc = fabric.util.drawArc,
+      toFixed = fabric.util.toFixed,
       commandLengths = {
         m: 2,
         l: 2,
@@ -428,6 +429,7 @@
     },
 
     /**
+     * *PMW*
      * overriding this function for this class to prevent stroke of shapes getting effected by scaling the objects
      * @private
      * @param {CanvasRenderingContext2D} ctx Context to render on
@@ -487,30 +489,40 @@
     /* _TO_SVG_START_ */
     /**
      * Returns svg representation of an instance
-     * @param {Function} [reviver] Method for further parsing of svg representation.
-     * @return {String} svg representation of an instance
+     * @return {Array} an array of strings with the specific svg representation
+     * of the instance
      */
-    toSVG: function(reviver) {
-      var chunks = [],
-          markup = this._createBaseSVGMarkup(), addTransform = '';
-
-      for (var i = 0, len = this.path.length; i < len; i++) {
-        chunks.push(this.path[i].join(' '));
-      }
-      var path = chunks.join(' ');
-      addTransform = ' translate(' + (-this.pathOffset.x) + ', ' + (-this.pathOffset.y) + ') ';
-      markup.push(
-        '<path ', this.getSvgId(),
-        'd="', path,
-        '" style="', this.getSvgStyles(),
-        '" transform="', this.getSvgTransform(), addTransform,
-        this.getSvgTransformMatrix(), '" stroke-linecap="round" ',
-        this.addPaintOrder(),
-        '/>\n'
-      );
-
-      return reviver ? reviver(markup.join('')) : markup.join('');
+    _toSVG: function () {
+        var specificTransform = this._getOffsetTransform(),
+            path = this.path.map(function (path) {
+                return path.join(' ');
+            }).join(' ');
+        return [
+            '<path ', 'COMMON_PARTS',
+            'd="', path,
+            '" stroke-linecap="round" ',
+            'transform="' + specificTransform + '" ',
+            '/>\n'
+        ];
     },
+
+      _getOffsetTransform: function () {
+          var digits = fabric.Object.NUM_FRACTION_DIGITS;
+          return ' translate(' + toFixed(-this.pathOffset.x, digits) + ', ' +
+              toFixed(-this.pathOffset.y, digits) + ')';
+      },
+
+      /**
+       * Returns svg clipPath representation of an instance
+       * @param {Function} [reviver] Method for further parsing of svg representation.
+       * @return {String} svg representation of an instance
+       */
+      toClipPathSVG: function (reviver) {
+          var additionalTransform = this._getOffsetTransform();
+          return '\t' + this._createBaseClipPathSVGMarkup(
+              this._toSVG(), {reviver: reviver, additionalTransform: additionalTransform}
+          );
+      },
     /* _TO_SVG_END_ */
 
     /**

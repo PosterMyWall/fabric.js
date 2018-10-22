@@ -45,7 +45,7 @@
     mainParameter: 'rotation',
 
     calculateMatrix: function() {
-      var rad = this.rotation * Math.PI, cos = Math.cos(rad), sin = Math.sin(rad),
+        var rad = this.rotation * Math.PI, cos = fabric.util.cos(rad), sin = fabric.util.sin(rad),
           aThird = 1 / 3, aThirdSqtSin = Math.sqrt(aThird) * sin, OneMinusCos = 1 - cos;
       this.matrix = [
         1, 0, 0, 0, 0,
@@ -64,6 +64,17 @@
       this.matrix[12] = cos + aThird * OneMinusCos;
     },
 
+      /**
+       * HueRotation isNeutralState implementation
+       * Used only in image applyFilters to discard filters that will not have an effect
+       * on the image
+       * @param {Object} options
+       **/
+      isNeutralState: function (options) {
+          this.calculateMatrix();
+          return filters.BaseFilter.prototype.isNeutralState.call(this, options);
+      },
+
     /**
      * Apply this filter to the input image data provided.
      *
@@ -79,7 +90,7 @@
      */
     applyTo: function(options) {
       this.calculateMatrix();
-      fabric.Image.filters.BaseFilter.prototype.applyTo.call(this, options);
+        filters.BaseFilter.prototype.applyTo.call(this, options);
     },
 
   });

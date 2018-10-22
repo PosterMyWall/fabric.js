@@ -66,6 +66,7 @@
     }
 
     if (!parentMethod) {
+        //PMW change
       return '';//console.log('tried to callSuper ' + methodName + ', method not found in prototype chain', this);
     }
 

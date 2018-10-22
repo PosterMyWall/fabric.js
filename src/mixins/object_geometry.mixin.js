@@ -10,7 +10,8 @@
   }
 
   var degreesToRadians = fabric.util.degreesToRadians,
-      multiplyMatrices = fabric.util.multiplyTransformMatrices;
+      multiplyMatrices = fabric.util.multiplyTransformMatrices,
+      transformPoint = fabric.util.transformPoint;
 
   fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prototype */ {
 
@@ -158,9 +159,9 @@
 
     /**
      * Checks if object is contained within the canvas with current viewportTransform
-     * the check is done stopping at first point that appear on screen
+     * the check is done stopping at first point that appears on screen
      * @param {Boolean} [calculate] use coordinates of current position instead of .oCoords
-     * @return {Boolean} true if object is fully contained within canvas
+     * @return {Boolean} true if object is fully or partially contained within canvas
      */
     isOnScreen: function(calculate) {
       if (!this.canvas) {
@@ -175,16 +176,45 @@
         }
       }
       // no points on screen, check intersection with absolute coordinates
-      if (this.intersectsWithRect(pointTL, pointBR, true)) {
+        if (this.intersectsWithRect(pointTL, pointBR, true, calculate)) {
         return true;
       }
-      // worst case scenario the object is so big that contains the screen
-      var centerPoint = { x: (pointTL.x + pointBR.x) / 2, y: (pointTL.y + pointBR.y) / 2 };
-      if (this.containsPoint(centerPoint, null, true)) {
-        return true;
-      }
-      return false;
+        return this._containsCenterOfCanvas(pointTL, pointBR, calculate);
     },
+
+      /**
+       * Checks if the object contains the midpoint between canvas extremities
+       * Does not make sense outside the context of isOnScreen and isPartiallyOnScreen
+       * @private
+       * @param {Fabric.Point} pointTL Top Left point
+       * @param {Fabric.Point} pointBR Top Right point
+       * @param {Boolean} calculate use coordinates of current position instead of .oCoords
+       * @return {Boolean} true if the objects containe the point
+       */
+      _containsCenterOfCanvas: function (pointTL, pointBR, calculate) {
+          // worst case scenario the object is so big that contains the screen
+          var centerPoint = { x: (pointTL.x + pointBR.x) / 2, y: (pointTL.y + pointBR.y) / 2 };
+          if (this.containsPoint(centerPoint, null, true, calculate)) {
+              return true;
+          }
+          return false;
+      },
+
+      /**
+       * Checks if object is partially contained within the canvas with current viewportTransform
+       * @param {Boolean} [calculate] use coordinates of current position instead of .oCoords
+       * @return {Boolean} true if object is partially contained within canvas
+       */
+      isPartiallyOnScreen: function (calculate) {
+          if (!this.canvas) {
+              return false;
+          }
+          var pointTL = this.canvas.vptCoords.tl, pointBR = this.canvas.vptCoords.br;
+          if (this.intersectsWithRect(pointTL, pointBR, true, calculate)) {
+              return true;
+          }
+          return this._containsCenterOfCanvas(pointTL, pointBR, calculate);
+      },
 
     /**
      * Method that returns an object with the object edges in it, given the coordinates of the corners
@@ -266,7 +296,7 @@
      * Returns coordinates of object's bounding rectangle (left, top, width, height)
      * the box is intented as aligned to axis of canvas.
      * @param {Boolean} [absolute] use coordinates without viewportTransform
-     * @param {Boolean} [calculate] use coordinates of current position instead of .oCoords
+     * @param {Boolean} [calculate] use coordinates of current position instead of .oCoords / .aCoords
      * @return {Object} Object with left, top, width, height properties
      */
     getBoundingRect: function(absolute, calculate) {
@@ -276,6 +306,7 @@
 
     /**
      * Returns width of an object bounding box counting transformations
+     * before 2.0 it was named getWidth();
      * @return {Number} width value
      */
     getScaledWidth: function() {
@@ -284,6 +315,7 @@
 
     /**
      * Returns height of an object bounding box counting transformations
+     * before 2.0 it was named getHeight();
      * @return {Number} height value
      */
     getScaledHeight: function() {
@@ -355,45 +387,55 @@
      * @chainable
      */
     calcCoords: function(absolute) {
-      var theta = degreesToRadians(this.angle),
+        var rotateMatrix = this._calcRotateMatrix(),
+            translateMatrix = this._calcTranslateMatrix(),
+            startMatrix = multiplyMatrices(translateMatrix, rotateMatrix),
           vpt = this.getViewportTransform(),
-          dim = absolute ? this._getTransformedDimensions() : this._calculateCurrentDimensions(),
-          currentWidth = dim.x, currentHeight = dim.y,
-          sinTh = theta ? Math.sin(theta) : 0,
-          cosTh = theta ? Math.cos(theta) : 1,
-          _angle = currentWidth > 0 ? Math.atan(currentHeight / currentWidth) : 0,
-          _hypotenuse = (currentWidth / Math.cos(_angle)) / 2,
-          offsetX = Math.cos(_angle + theta) * _hypotenuse,
-          offsetY = Math.sin(_angle + theta) * _hypotenuse,
-          center = this.getCenterPoint(),
-          // offset added for rotate and scale actions
-          coords = absolute ? center : fabric.util.transformPoint(center, vpt),
-          tl  = new fabric.Point(coords.x - offsetX, coords.y - offsetY),
-          tr  = new fabric.Point(tl.x + (currentWidth * cosTh), tl.y + (currentWidth * sinTh)),
-          bl  = new fabric.Point(tl.x - (currentHeight * sinTh), tl.y + (currentHeight * cosTh)),
-          br  = new fabric.Point(coords.x + offsetX, coords.y + offsetY);
+            finalMatrix = absolute ? startMatrix : multiplyMatrices(vpt, startMatrix),
+            dim = this._getTransformedDimensions(),
+            w = dim.x / 2, h = dim.y / 2,
+            tl = transformPoint({x: -w, y: -h}, finalMatrix),
+            tr = transformPoint({x: w, y: -h}, finalMatrix),
+            bl = transformPoint({x: -w, y: h}, finalMatrix),
+            br = transformPoint({x: w, y: h}, finalMatrix);
       if (!absolute) {
+          var padding = this.padding, angle = degreesToRadians(this.angle),
+              cos = fabric.util.cos(angle), sin = fabric.util.sin(angle),
+              cosP = cos * padding, sinP = sin * padding, cosPSinP = cosP + sinP,
+              cosPMinusSinP = cosP - sinP;
+          if (padding) {
+              tl.x -= cosPMinusSinP;
+              tl.y -= cosPSinP;
+              tr.x += cosPSinP;
+              tr.y -= cosPMinusSinP;
+              bl.x -= cosPSinP;
+              bl.y += cosPMinusSinP;
+              br.x += cosPMinusSinP;
+              br.y += cosPSinP;
+          }
         var ml  = new fabric.Point((tl.x + bl.x) / 2, (tl.y + bl.y) / 2),
             mt  = new fabric.Point((tr.x + tl.x) / 2, (tr.y + tl.y) / 2),
             mr  = new fabric.Point((br.x + tr.x) / 2, (br.y + tr.y) / 2),
             mb  = new fabric.Point((br.x + bl.x) / 2, (br.y + bl.y) / 2),
-            mtr = new fabric.Point(mt.x + sinTh * this.rotatingPointOffset, mt.y - cosTh * this.rotatingPointOffset);
+            mtr = new fabric.Point(mt.x + sin * this.rotatingPointOffset, mt.y - cos * this.rotatingPointOffset);
       }
 
-      // debugging
-
-      /* setTimeout(function() {
-         canvas.contextTop.fillStyle = 'green';
-         canvas.contextTop.fillRect(mb.x, mb.y, 3, 3);
-         canvas.contextTop.fillRect(bl.x, bl.y, 3, 3);
-         canvas.contextTop.fillRect(br.x, br.y, 3, 3);
-         canvas.contextTop.fillRect(tl.x, tl.y, 3, 3);
-         canvas.contextTop.fillRect(tr.x, tr.y, 3, 3);
-         canvas.contextTop.fillRect(ml.x, ml.y, 3, 3);
-         canvas.contextTop.fillRect(mr.x, mr.y, 3, 3);
-         canvas.contextTop.fillRect(mt.x, mt.y, 3, 3);
-         canvas.contextTop.fillRect(mtr.x, mtr.y, 3, 3);
-       }, 50); */
+        // if (!absolute) {
+        //   var canvas = this.canvas;
+        //   setTimeout(function() {
+        //     canvas.contextTop.clearRect(0, 0, 700, 700);
+        //     canvas.contextTop.fillStyle = 'green';
+        //     canvas.contextTop.fillRect(mb.x, mb.y, 3, 3);
+        //     canvas.contextTop.fillRect(bl.x, bl.y, 3, 3);
+        //     canvas.contextTop.fillRect(br.x, br.y, 3, 3);
+        //     canvas.contextTop.fillRect(tl.x, tl.y, 3, 3);
+        //     canvas.contextTop.fillRect(tr.x, tr.y, 3, 3);
+        //     canvas.contextTop.fillRect(ml.x, ml.y, 3, 3);
+        //     canvas.contextTop.fillRect(mr.x, mr.y, 3, 3);
+        //     canvas.contextTop.fillRect(mt.x, mt.y, 3, 3);
+        //     canvas.contextTop.fillRect(mtr.x, mtr.y, 3, 3);
+        //   }, 50);
+        // }
 
       var oCoords = {
         // corners
@@ -409,15 +451,19 @@
         oCoords.mtr = mtr;
       }
 
-      if(this.hasButton) {
-        // In case replace button is pushed down due to overlapping of corners,
-        // 50 is added to the currentHeight to ensure that selectable area of replace button is shifted accordingly.
-        if((this.width * this.scaleX) < (this.buttonWidth + 2 * this.cornerSize)) {
-          currentHeight = currentHeight + 50;
-        }
-        oCoords.btn = new fabric.Point(coords.x - (sinTh * ((currentHeight)/2)), coords.y + (cosTh * ((currentHeight)/2)));
+        //PMW: the below two ifs are for pmw buttons
+        if (this.hasButton) {
+            // In case replace button is pushed down due to overlapping of corners,
+            // 50 is added to the currentHeight to ensure that selectable area of replace button is shifted accordingly.
+            var currentHeight = this._calculateCurrentDimensions().y,
+                center = this.getCenterPoint(),
+                coords = absolute ? center : fabric.util.transformPoint(center, vpt);
+            if ((this.width * this.scaleX) < (this.buttonWidth + 2 * this.cornerSize)) {
+                currentHeight = currentHeight + 50;
+            }
+            oCoords.btn = new fabric.Point(coords.x - (sin * ((currentHeight) / 2)), coords.y + (cos * ((currentHeight) / 2)));
 
-      }
+        }
 
       if(this.hasMiddleButtons) {
         oCoords.pmwBtnMr = mr;
@@ -428,8 +474,8 @@
     },
 
     /**
-     * Sets corner position coordinates based on current angle, width and height
-     * See https://github.com/kangax/fabric.js/wiki/When-to-call-setCoords
+     * Sets corner position coordinates based on current angle, width and height.
+     * See {@link https://github.com/kangax/fabric.js/wiki/When-to-call-setCoords|When-to-call-setCoords}
      * @param {Boolean} [ignoreZoom] set oCoords with or without the viewport transform.
      * @param {Boolean} [skipAbsolute] skip calculation of aCoords, usefull in setViewportTransform
      * @return {fabric.Object} thisArg
@@ -453,15 +499,20 @@
      */
     _calcRotateMatrix: function() {
       if (this.angle) {
-        var theta = degreesToRadians(this.angle), cos = Math.cos(theta), sin = Math.sin(theta);
-        // trying to keep rounding error small, ugly but it works.
-        if (cos === 6.123233995736766e-17 || cos === -1.8369701987210297e-16) {
-          cos = 0;
-        }
+          var theta = degreesToRadians(this.angle), cos = fabric.util.cos(theta), sin = fabric.util.sin(theta);
         return [cos, sin, -sin, cos, 0, 0];
       }
       return fabric.iMatrix.concat();
     },
+
+      /**
+       * calculate the translation matrix for an object transform
+       * @return {Array} rotation matrix for the object
+       */
+      _calcTranslateMatrix: function () {
+          var center = this.getCenterPoint();
+          return [1, 0, 0, 1, center.x, center.y];
+      },
 
     transformMatrixKey: function(skipGroup) {
       var sep = '_', prefix = '';
@@ -469,7 +520,7 @@
         prefix = this.group.transformMatrixKey(skipGroup) + sep;
       };
       return prefix + this.top + sep + this.left + sep + this.scaleX + sep + this.scaleY +
-        sep + this.skewX + sep + this.skewY + sep + this.angle +
+          sep + this.skewX + sep + this.skewY + sep + this.angle + sep + this.originX + sep + this.originY +
         sep + this.width + sep + this.height + sep + this.strokeWidth + this.flipX + this.flipY;
     },
 
@@ -501,8 +552,7 @@
       if (cache.key === key) {
         return cache.value;
       }
-      var center = this.getCenterPoint(),
-          matrix = [1, 0, 0, 1, center.x, center.y],
+        var matrix = this._calcTranslateMatrix(),
           rotateMatrix,
           dimensionMatrix = this._calcDimensionsTransformMatrix(this.skewX, this.skewY, true);
       if (this.angle) {
@@ -558,8 +608,11 @@
       if (typeof skewY === 'undefined') {
         skewY = this.skewY;
       }
-      var dimensions = this._getNonTransformedDimensions(),
-          dimX = dimensions.x / 2, dimY = dimensions.y / 2,
+        var dimensions = this._getNonTransformedDimensions();
+        if (skewX === 0 && skewY === 0) {
+            return {x: dimensions.x * this.scaleX, y: dimensions.y * this.scaleY};
+        }
+        var dimX = dimensions.x / 2, dimY = dimensions.y / 2,
           points = [
             {
               x: -dimX,

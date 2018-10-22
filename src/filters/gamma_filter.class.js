@@ -57,6 +57,15 @@
      */
     mainParameter: 'gamma',
 
+      /**
+       * Constructor
+       * @param {Object} [options] Options object
+       */
+      initialize: function (options) {
+          this.gamma = [1, 1, 1];
+          filters.BaseFilter.prototype.initialize.call(this, options);
+      },
+
     /**
      * Apply the Gamma operation to a Uint8Array representing the pixels of an image.
      *

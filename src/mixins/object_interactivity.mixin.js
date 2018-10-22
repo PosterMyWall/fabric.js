@@ -1,11 +1,6 @@
 (function() {
 
-  var degreesToRadians = fabric.util.degreesToRadians,
-  //jscs:disable requireCamelCaseOrUpperCaseIdentifiers
-      isVML = function () {
-        return typeof G_vmlCanvasManager !== 'undefined';
-      };
-  //jscs:enable requireCamelCaseOrUpperCaseIdentifiers
+    var degreesToRadians = fabric.util.degreesToRadians;
 
   fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prototype */ {
 
@@ -84,8 +79,8 @@
           /* Math.sqrt(2 * Math.pow(this.cornerSize, 2)) / 2, */
           /* 0.707106 stands for sqrt(2)/2 */
           cornerHypotenuse = this.cornerSize * 0.707106,
-          cosHalfOffset = cornerHypotenuse * Math.cos(newTheta),
-          sinHalfOffset = cornerHypotenuse * Math.sin(newTheta),
+          cosHalfOffset = cornerHypotenuse * fabric.util.cos(newTheta),
+          sinHalfOffset = cornerHypotenuse * fabric.util.sin(newTheta),
           x, y;
 
       for (var point in coords) {
@@ -93,6 +88,7 @@
         y = coords[point].y;
 
         if(point === 'btn') {
+            //PMW: pmw replace button
           // bw and bh are replace button dimensions.
           var bw = this.buttonWidth,
               bh = this.cornerSize,

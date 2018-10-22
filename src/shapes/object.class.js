@@ -28,6 +28,12 @@
    * @fires selected
    * @fires deselected
    * @fires modified
+   * @fires modified
+   * @fires moved
+   * @fires scaled
+   * @fires rotated
+   * @fires skewed
+   *
    * @fires rotating
    * @fires scaling
    * @fires moving
@@ -39,6 +45,11 @@
    * @fires mouseout
    * @fires mousewheel
    * @fires mousedblclick
+   *
+   * @fires dragover
+   * @fires dragenter
+   * @fires dragleave
+   * @fires drop
    */
   fabric.Object = fabric.util.createClass(fabric.CommonMethods, /** @lends fabric.Object.prototype */ {
 
@@ -159,6 +170,7 @@
     cornerSize:               22,
 
     /**
+     * *PMW*
      * offset to give while rendering transform detail
      * @type Number
      * @default
@@ -166,6 +178,7 @@
     transformDetailOffset: 30,
 
     /**
+     * *PMW*
      * Object's transform details are rendered only if this flag is true
      * @type Boolean
      * @default
@@ -221,6 +234,7 @@
      */
     cornerColor:              'rgba(255,255,255,1)',
     /**
+     * *PMW*
      * PosterMyWall property used for showing the replace image button when editing a template.
      * @type Boolean
      * @default
@@ -228,6 +242,7 @@
     hasButton: false,
 
     /**
+     * *PMW*
      * PosterMyWall property used for showing the middle buttons on right and left edges.
      * @type Boolean
      * @default
@@ -235,6 +250,7 @@
     hasMiddleButtons: false,
 
     /**
+     * *PMW*
      * PosterMyWall property for the width of the button.
      * @type Number
      * @default
@@ -242,6 +258,7 @@
     buttonWidth: 92,
 
     /**
+     * *PMW*
      * PosterMyWall property for the default text of the button.
      * @type String
      * @default
@@ -309,6 +326,7 @@
 
     /**
      * Color of object's fill
+     * takes css colors https://www.w3.org/TR/css-color-3/
      * @type String
      * @default
      */
@@ -332,6 +350,7 @@
 
     /**
      * Background color of an object.
+     * takes css colors https://www.w3.org/TR/css-color-3/
      * @type String
      * @default
      */
@@ -347,6 +366,7 @@
 
     /**
      * When defined, an object is rendered via stroke and this property specifies its color
+     * takes css colors https://www.w3.org/TR/css-color-3/
      * @type String
      * @default
      */
@@ -384,7 +404,7 @@
      * @type Number
      * @default
      */
-    strokeMiterLimit:         10,
+    strokeMiterLimit: 4,
 
     /**
      * Shadow object representing shadow of this shape
@@ -485,7 +505,9 @@
     includeDefaultValues:     true,
 
     /**
-     * Function that determines clipping of an object (context is passed as a first argument)
+     * Function that determines clipping of an object (context is passed as a first argument).
+     * If you are using code minification, ctx argument can be minified/manglied you should use
+     * as a workaround `var ctx = arguments[0];` in the function;
      * Note that context origin is at the object's center point (not left/top corner)
      * @deprecated since 2.0.0
      * @type Function
@@ -553,11 +575,10 @@
      * @type Boolean
      * @default
      */
-
     lockScalingFlip:          true,
 
     /**
-     * When `true`, object is not exported in SVG or OBJECT/JSON
+     * When `true`, object is not exported in OBJECT/JSON
      * since 1.6.3
      * @type Boolean
      * @default
@@ -639,12 +660,45 @@
 
     /**
      * List of properties to consider when checking if cache needs refresh
+     * Those properties are checked by statefullCache ON ( or lazy mode if we want ) or from single
+     * calls to Object.set(key, value). If the key is in this list, the object is marked as dirty
+     * and refreshed at the next render
      * @type Array
      */
     cacheProperties: (
       'fill stroke strokeWidth strokeDashArray width height paintFirst' +
       ' strokeLineCap strokeLineJoin strokeMiterLimit backgroundColor'
     ).split(' '),
+
+      /**
+       * a fabricObject that, without stroke define a clipping area with their shape. filled in black
+       * the clipPath object gets used when the object has rendered, and the context is placed in the center
+       * of the object cacheCanvas.
+       * If you want 0,0 of a clipPath to align with an object center, use clipPath.originX/Y to 'center'
+       * @type fabric.Object
+       */
+      clipPath: undefined,
+
+      /**
+       * Meaningfull ONLY when the object is used as clipPath.
+       * if true, the clipPath will make the object clip to the outside of the clipPath
+       * since 2.4.0
+       * @type boolean
+       * @default false
+       */
+      inverted: false,
+
+      /**
+       * Meaningfull ONLY when the object is used as clipPath.
+       * if true, the clipPath will have its top and left relative to canvas, and will
+       * not be influenced by the object transform. This will make the clipPath relative
+       * to the canvas, but clipping just a particular object.
+       * WARNING this is beta, this feature may change or be renamed.
+       * since 2.4.0
+       * @type boolean
+       * @default false
+       */
+      absolutePositioned: false,
 
     /**
      * Constructor
@@ -662,9 +716,11 @@
      */
     _createCacheCanvas: function() {
       this._cacheProperties = {};
-      this._cacheCanvas = fabric.document.createElement('canvas');
+        this._cacheCanvas = fabric.util.createCanvasElement();
       this._cacheContext = this._cacheCanvas.getContext('2d');
       this._updateCacheCanvas();
+        // if canvas gets created, is empty, so dirty.
+        this.dirty = true;
     },
 
     /**
@@ -716,20 +772,18 @@
      * Return the dimension and the zoom level needed to create a cache canvas
      * big enough to host the object to be cached.
      * @private
-     * @param {Object} dim.x width of object to be cached
-     * @param {Object} dim.y height of object to be cached
+     * @return {Object}.x width of object to be cached
+     * @return {Object}.y height of object to be cached
      * @return {Object}.width width of canvas
      * @return {Object}.height height of canvas
      * @return {Object}.zoomX zoomX zoom value to unscale the canvas before drawing cache
      * @return {Object}.zoomY zoomY zoom value to unscale the canvas before drawing cache
      */
     _getCacheCanvasDimensions: function() {
-      var zoom = this.canvas && this.canvas.getZoom() || 1,
-          objectScale = this.getObjectScaling(),
-          retina = this.canvas && this.canvas._isRetinaScaling() ? fabric.devicePixelRatio : 1,
+        var objectScale = this.getTotalObjectScaling(),
           dim = this._getNonTransformedDimensions(),
-          zoomX = objectScale.scaleX * zoom * retina,
-          zoomY = objectScale.scaleY * zoom * retina,
+            zoomX = objectScale.scaleX,
+            zoomY = objectScale.scaleY,
           width = dim.x * zoomX,
           height = dim.y * zoomY;
       return {
@@ -751,9 +805,10 @@
      * @return {Boolean} true if the canvas has been resized
      */
     _updateCacheCanvas: function() {
-      if (this.noScaleCache && this.canvas && this.canvas._currentTransform) {
-        var target = this.canvas._currentTransform.target,
-            action = this.canvas._currentTransform.action;
+        var targetCanvas = this.canvas;
+        if (this.noScaleCache && targetCanvas && targetCanvas._currentTransform) {
+            var target = targetCanvas._currentTransform.target,
+                action = targetCanvas._currentTransform.action;
         if (this === target && action.slice && action.slice(0, 5) === 'scale') {
           return false;
         }
@@ -870,8 +925,14 @@
             globalCompositeOperation: this.globalCompositeOperation,
             transformMatrix:          this.transformMatrix ? this.transformMatrix.concat() : null,
             skewX:                    toFixed(this.skewX, NUM_FRACTION_DIGITS),
-            skewY:                    toFixed(this.skewY, NUM_FRACTION_DIGITS)
+              skewY: toFixed(this.skewY, NUM_FRACTION_DIGITS),
           };
+
+        if (this.clipPath) {
+            object.clipPath = this.clipPath.toObject(propertiesToInclude);
+            object.clipPath.inverted = this.clipPath.inverted;
+            object.clipPath.absolutePositioned = this.clipPath.absolutePositioned;
+        }
 
       fabric.util.populateWithProperties(this, object, propertiesToInclude);
       if (!this.includeDefaultValues) {
@@ -898,7 +959,6 @@
     _removeDefaultValues: function(object) {
       var prototype = fabric.util.getKlass(object.type).prototype,
           stateProperties = prototype.stateProperties;
-
       stateProperties.forEach(function(prop) {
         if (object[prop] === prototype[prop]) {
           delete object[prop];
@@ -936,6 +996,21 @@
       }
       return { scaleX: scaleX, scaleY: scaleY };
     },
+
+      /**
+       * Return the object scale factor counting also the group scaling, zoom and retina
+       * @return {Object} object with scaleX and scaleY properties
+       */
+      getTotalObjectScaling: function () {
+          var scale = this.getObjectScaling(), scaleX = scale.scaleX, scaleY = scale.scaleY;
+          if (this.canvas) {
+              var zoom = this.canvas.getZoom();
+              var retina = this.canvas.getRetinaScaling();
+              scaleX *= zoom * retina;
+              scaleY *= zoom * retina;
+          }
+          return {scaleX: scaleX, scaleY: scaleY};
+      },
 
     /**
      * Return the object opacity counting also the group property
@@ -1071,14 +1146,7 @@
       }
       this.clipTo && fabric.util.clipContext(this, ctx);
       if (this.shouldCache()) {
-        if (!this._cacheCanvas) {
-          this._createCacheCanvas();
-        }
-        if (this.isCacheDirty()) {
-          this.statefullCache && this.saveState({ propertySet: 'cacheProperties' });
-          this.drawObject(this._cacheContext);
-          this.dirty = false;
-        }
+          this.renderCache();
         this.drawCacheOnCanvas(ctx);
       }
       else {
@@ -1092,6 +1160,18 @@
       this.clipTo && ctx.restore();
       ctx.restore();
     },
+
+      renderCache: function (options) {
+          options = options || {};
+          if (!this._cacheCanvas) {
+              this._createCacheCanvas();
+          }
+          if (this.isCacheDirty()) {
+              this.statefullCache && this.saveState({propertySet: 'cacheProperties'});
+              this.drawObject(this._cacheContext, options.forClipping);
+              this.dirty = false;
+          }
+      },
 
     /**
      * Remove cacheCanvas and its dimensions from the objects
@@ -1114,6 +1194,9 @@
       if (this.paintFirst === 'stroke' && typeof this.shadow === 'object') {
         return true;
       }
+        if (this.clipPath) {
+            return true;
+        }
       return false;
     },
 
@@ -1140,16 +1223,64 @@
       return !!this.shadow && (this.shadow.offsetX !== 0 || this.shadow.offsetY !== 0);
     },
 
+      /**
+       * Execute the drawing operation for an object clipPath
+       * @param {CanvasRenderingContext2D} ctx Context to render on
+       */
+      drawClipPathOnCache: function (ctx) {
+          var path = this.clipPath;
+          ctx.save();
+          // DEBUG: uncomment this line, comment the following
+          // ctx.globalAlpha = 0.4
+          if (path.inverted) {
+              ctx.globalCompositeOperation = 'destination-out';
+          }
+          else {
+              ctx.globalCompositeOperation = 'destination-in';
+          }
+          //ctx.scale(1 / 2, 1 / 2);
+          if (path.absolutePositioned) {
+              var m = fabric.util.invertTransform(this.calcTransformMatrix());
+              ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
+          }
+          path.transform(ctx);
+          ctx.scale(1 / path.zoomX, 1 / path.zoomY);
+          ctx.drawImage(path._cacheCanvas, -path.cacheTranslationX, -path.cacheTranslationY);
+          ctx.restore();
+      },
+
     /**
      * Execute the drawing operation for an object on a specified context
      * @param {CanvasRenderingContext2D} ctx Context to render on
      */
-    drawObject: function(ctx) {
-      this._renderBackground(ctx);
-      this._setStrokeStyles(ctx, this);
-      this._setFillStyles(ctx, this);
+    drawObject: function (ctx, forClipping) {
+
+        if (forClipping) {
+            this._setClippingProperties(ctx);
+        }
+        else {
+            this._renderBackground(ctx);
+            this._setStrokeStyles(ctx, this);
+            this._setFillStyles(ctx, this);
+        }
       this._render(ctx);
+        this._drawClipPath(ctx);
     },
+
+      _drawClipPath: function (ctx) {
+          var path = this.clipPath;
+          if (!path) {
+              return;
+          }
+          // needed to setup a couple of variables
+          // path canvas gets overridden with this one.
+          // TODO find a better solution?
+          path.canvas = this.canvas;
+          path.shouldCache();
+          path._transformDone = true;
+          path.renderCache({forClipping: true});
+          this.drawClipPathOnCache(ctx);
+      },
 
     /**
      * Paint the cached copy of the object on the target context.
@@ -1174,7 +1305,10 @@
         return true;
       }
       else {
-        if (this.dirty || (this.statefullCache && this.hasStateChanged('cacheProperties'))) {
+          if (this.dirty ||
+              (this.clipPath && this.clipPath.absolutePositioned) ||
+              (this.statefullCache && this.hasStateChanged('cacheProperties'))
+          ) {
           if (this._cacheCanvas && !skipCanvas) {
             var width = this.cacheWidth / this.zoomX;
             var height = this.cacheHeight / this.zoomY;
@@ -1242,6 +1376,12 @@
       }
     },
 
+      _setClippingProperties: function (ctx) {
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = 'transparent';
+          ctx.fillStyle = '#000000';
+      },
+
     /**
      * @private
      * Sets line dash
@@ -1298,6 +1438,7 @@
     },
 
     /**
+     * *PMW* postermywall change
      * Renders transform detail for the object.
      * On object move, display position coordinates
      * On object resize, display dimensions
@@ -1336,6 +1477,7 @@
     },
 
     /**
+     * *PMW* postermywall change
      * Returns the string containing transform detail to show(angle, coordinates or dimensions)
      * @param {string} action type of transform (drag, rotate aor scale)
      * @returns {string}
@@ -1380,6 +1522,7 @@
     },
 
     /**
+     * *PMW* postermywall change
      * Calculates and returns coordinates of a point at which dimension will be shown
      * @param {string} corner corner at which text should be displayed
      * @param {number} textWidth width of text to render
@@ -1701,19 +1844,30 @@
      * @param {Number} [options.top] Cropping top offset. Introduced in v1.2.14
      * @param {Number} [options.width] Cropping width. Introduced in v1.2.14
      * @param {Number} [options.height] Cropping height. Introduced in v1.2.14
-     * @param {Boolean} [options.enableRetina] Enable retina scaling for clone image. Introduce in 1.6.4
+     * @param {Boolean} [options.enableRetinaScaling] Enable retina scaling for clone image. Introduce in 1.6.4
+     * @param {Boolean} [options.withoutTransform] Remove current object transform ( no scale , no angle, no flip, no skew ). Introduced in 2.3.4
      * @return {String} Returns a data: URL containing a representation of the object in the format specified by options.format
      */
     toDataURL: function(options) {
       options || (options = { });
 
+        var origParams = fabric.util.saveObjectTransform(this);
+
+        if (options.withoutTransform) {
+            fabric.util.resetObjectTransform(this);
+        }
+
       var el = fabric.util.createCanvasElement(),
-          boundingRect = this.getBoundingRect();
+          // skip canvas zoom and calculate with setCoords now.
+          boundingRect = this.getBoundingRect(true, true);
 
       el.width = boundingRect.width;
       el.height = boundingRect.height;
-      fabric.util.wrapElement(el, 'div');
-      var canvas = new fabric.StaticCanvas(el, {enableRetinaScaling: options.enableRetinaScaling});
+        var canvas = new fabric.StaticCanvas(el, {
+            enableRetinaScaling: options.enableRetinaScaling,
+            renderOnAddRemove: false,
+            skipOffscreen: false,
+        });
       // to avoid common confusion https://github.com/kangax/fabric.js/issues/806
       if (options.format === 'jpg') {
         options.format = 'jpeg';
@@ -1723,20 +1877,17 @@
         canvas.backgroundColor = '#fff';
       }
 
-      var origParams = {
-        left: this.left,
-        top: this.top
-      };
-
       this.setPositionByOrigin(new fabric.Point(canvas.width / 2, canvas.height / 2), 'center', 'center');
 
       var originalCanvas = this.canvas;
       canvas.add(this);
       var data = canvas.toDataURL(options);
-
       this.set(origParams).setCoords();
       this.canvas = originalCanvas;
-
+        // canvas.dispose will call image.dispose that will nullify the elements
+        // since this canvas is a simple element for the process, we remove references
+        // to objects in this way in order to avoid object trashing.
+        canvas._objects = [];
       canvas.dispose();
       canvas = null;
 
@@ -1849,20 +2000,18 @@
      * @param {String} [options.repeat=repeat] Repeat property of a pattern (one of repeat, repeat-x, repeat-y or no-repeat)
      * @param {Number} [options.offsetX=0] Pattern horizontal offset from object's left/top corner
      * @param {Number} [options.offsetY=0] Pattern vertical offset from object's left/top corner
+     * @param {Function} [callback] Callback to invoke when image set as a pattern
      * @return {fabric.Object} thisArg
      * @chainable
      * @see {@link http://jsfiddle.net/fabricjs/QT3pa/|jsFiddle demo}
      * @example <caption>Set pattern</caption>
-     * fabric.util.loadImage('http://fabricjs.com/assets/escheresque_ste.png', function(img) {
-     *   object.setPatternFill({
-     *     source: img,
-     *     repeat: 'repeat'
-     *   });
-     *   canvas.renderAll();
-     * });
+     * object.setPatternFill({
+     *   source: 'http://fabricjs.com/assets/escheresque_ste.png',
+     *   repeat: 'repeat'
+     * },canvas.renderAll.bind(canvas));
      */
-    setPatternFill: function(options) {
-      return this.set('fill', new fabric.Pattern(options));
+    setPatternFill: function (options, callback) {
+        return this.set('fill', new fabric.Pattern(options, callback));
     },
 
     /**
@@ -2010,6 +2159,7 @@
       };
     },
     /**
+     * *PMW*
      * This function returns corner points of the object relative to the given center.
      * @param {Object} center center of object
      * @returns {{tl: ({x: number, y: number}|*), tr: ({x: number, y: number}|*), bl: ({x: number, y: number}|*), br: ({x: number, y: *}|*)}}
@@ -2099,8 +2249,11 @@
       if (typeof patterns[1] !== 'undefined') {
         object.stroke = patterns[1];
       }
-      var instance = extraParam ? new klass(object[extraParam], object) : new klass(object);
-      callback && callback(instance);
+        fabric.util.enlivenObjects([object.clipPath], function (enlivedProps) {
+            object.clipPath = enlivedProps[0];
+            var instance = extraParam ? new klass(object[extraParam], object) : new klass(object);
+            callback && callback(instance);
+        });
     });
   };
 

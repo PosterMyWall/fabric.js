@@ -3,7 +3,6 @@
   'use strict';
 
   var fabric = global.fabric || (global.fabric = { }),
-      extend = fabric.util.object.extend,
       min = fabric.util.array.min,
       max = fabric.util.array.max;
 
@@ -11,6 +10,7 @@
     return;
   }
 
+    // **-PMW-**
   // lock-related properties, for use in fabric.Group#get
   // to enable locking behavior on group
   // when one of its objects has lock-related properties set
@@ -71,12 +71,14 @@
     useSetOnGroup: true,
 
     /**
+     * **-PMW-**
      * Whether to render a rectangle background or a tilted background
      * @type Boolean
      */
     leanBackground: false,
 
     /**
+     * **-PMW-**
      * Leanness of background
      * @type Number
      */
@@ -101,15 +103,18 @@
         this._objects[i].group = this;
       }
 
-      if (options.originX) {
-        this.originX = options.originX;
-      }
-      if (options.originY) {
-        this.originY = options.originY;
-      }
-
       if (!isAlreadyGrouped) {
         var center = options && options.centerPoint;
+          // we want to set origins before calculating the bounding box.
+          // so that the topleft can be set with that in mind.
+          // if specific top and left are passed, are overwritten later
+          // with the callSuper('initialize', options)
+          if (options.originX !== undefined) {
+              this.originX = options.originX;
+          }
+          if (options.originY !== undefined) {
+              this.originY = options.originY;
+          }
         // if coming from svg i do not want to calc bounds.
         // i assume width and height are passed along options
         center || this._calcBounds();
@@ -229,6 +234,7 @@
     },
 
       /**
+       * **-PMW-**
        * Properties that are delegated to group objects when reading/writing
        * @param {Object} delegatedProperties
        */
@@ -260,10 +266,13 @@
       if (this.delegatedProperties[key] || key === 'canvas') {
         i = this._objects.length;
         while (i--) {
+            // PMW: by using set() insetead of _set(), calcTextWidth and calcTextHeight returns accurate
+            // results , which we are using in tables/schedules/menus
+            // this._objects[i]._set(key, value);
           this._objects[i].set(key, value);
         }
       }
-      this.callSuper('_set', key, value);
+        fabric.Object.prototype._set.call(this, key, value);
     },
 
     /**
@@ -272,16 +281,17 @@
      * @return {Object} object representation of an instance
      */
     toObject: function(propertiesToInclude) {
-      var objsToObject = this.getObjects().map(function(obj) {
+        var _includeDefaultValues = this.includeDefaultValues;
+        var objsToObject = this._objects.map(function (obj) {
         var originalDefaults = obj.includeDefaultValues;
-        obj.includeDefaultValues = obj.group.includeDefaultValues;
+            obj.includeDefaultValues = _includeDefaultValues;
         var _obj = obj.toObject(propertiesToInclude);
         obj.includeDefaultValues = originalDefaults;
         return _obj;
       });
-      return extend(this.callSuper('toObject', propertiesToInclude), {
-        objects: objsToObject
-      });
+        var obj = fabric.Object.prototype.toObject.call(this, propertiesToInclude);
+        obj.objects = objsToObject;
+        return obj;
     },
 
     /**
@@ -295,17 +305,18 @@
         objsToObject = sourcePath;
       }
       else {
-        objsToObject = this.getObjects().map(function(obj) {
+          var _includeDefaultValues = this.includeDefaultValues;
+          objsToObject = this._objects.map(function (obj) {
           var originalDefaults = obj.includeDefaultValues;
-          obj.includeDefaultValues = obj.group.includeDefaultValues;
+              obj.includeDefaultValues = _includeDefaultValues;
           var _obj = obj.toDatalessObject(propertiesToInclude);
           obj.includeDefaultValues = originalDefaults;
           return _obj;
         });
       }
-      return extend(this.callSuper('toDatalessObject', propertiesToInclude), {
-        objects: objsToObject
-      });
+        var obj = fabric.Object.prototype.toDatalessObject.call(this, propertiesToInclude);
+        obj.objects = objsToObject;
+        return obj;
     },
 
     /**
@@ -314,6 +325,9 @@
      */
     render: function(ctx) {
       this._transformDone = true;
+
+        /*-PMW-*/
+        // for rencering custom backgrounds
       ctx.save();
       this.transform(ctx);
       if (this instanceof fabric.Table) {
@@ -394,7 +408,7 @@
      */
     willDrawShadow: function() {
       if (this.shadow) {
-        return this.callSuper('willDrawShadow');
+          return fabric.Object.prototype.willDrawShadow.call(this);
       }
       for (var i = 0, len = this._objects.length; i < len; i++) {
         if (this._objects[i].willDrawShadow()) {
@@ -420,13 +434,14 @@
       for (var i = 0, len = this._objects.length; i < len; i++) {
         this._objects[i].render(ctx);
       }
+        this._drawClipPath(ctx);
     },
 
     /**
      * Check if cache is dirty
      */
-    isCacheDirty: function() {
-      if (this.callSuper('isCacheDirty')) {
+    isCacheDirty: function (skipCanvas) {
+        if (this.callSuper('isCacheDirty', skipCanvas)) {
         return true;
       }
       if (!this.statefullCache) {
@@ -558,6 +573,7 @@
       return this;
     },
     /**
+     * **PMW**
      * Aligns the items in the group horizontally.
      * @param {String} type Must be either 'left', 'right' or 'center'
      */
@@ -667,7 +683,7 @@
         }
       }
 
-      this.set(this._getBounds(aX, aY, onlyWidthHeight));
+        this._getBounds(aX, aY, onlyWidthHeight);
     },
 
     /**
@@ -676,28 +692,16 @@
     _getBounds: function(aX, aY, onlyWidthHeight) {
       var minXY = new fabric.Point(min(aX), min(aY)),
           maxXY = new fabric.Point(max(aX), max(aY)),
-          obj = {
-            width: (maxXY.x - minXY.x) || 0,
-            height: (maxXY.y - minXY.y) || 0
-          };
-
+          top = minXY.y || 0, left = minXY.x || 0,
+          width = (maxXY.x - minXY.x) || 0,
+          height = (maxXY.y - minXY.y) || 0;
+        this.width = width;
+        this.height = height;
       if (!onlyWidthHeight) {
-        obj.left = minXY.x || 0;
-        obj.top = minXY.y || 0;
-        if (this.originX === 'center') {
-          obj.left += obj.width / 2;
-        }
-        if (this.originX === 'right') {
-          obj.left += obj.width;
-        }
-        if (this.originY === 'center') {
-          obj.top += obj.height / 2;
-        }
-        if (this.originY === 'bottom') {
-          obj.top += obj.height;
-        }
+          // the bounding box always finds the topleft most corner.
+          // whatever is the group origin, we set up here the left/top position.
+          this.setPositionByOrigin({x: left, y: top}, 'left', 'top');
       }
-      return obj;
     },
 
     /* _TO_SVG_START_ */
@@ -707,24 +711,30 @@
      * @return {String} svg representation of an instance
      */
     toSVG: function(reviver) {
-      var markup = this._createBaseSVGMarkup();
-      markup.push(
-        '<g ', this.getSvgId(), 'transform="',
-        /* avoiding styles intentionally */
-        this.getSvgTransform(),
-        this.getSvgTransformMatrix(),
-        '" style="',
-        this.getSvgFilter(),
-        '">\n'
-      );
+        var svgString = [];
 
       for (var i = 0, len = this._objects.length; i < len; i++) {
-        markup.push('\t', this._objects[i].toSVG(reviver));
+          svgString.push('\t', this._objects[i].toSVG(reviver));
       }
 
-      markup.push('</g>\n');
+        return this._createBaseSVGMarkup(
+            svgString,
+            {reviver: reviver, noStyle: true, withShadow: true});
+    },
 
-      return reviver ? reviver(markup.join('')) : markup.join('');
+      /**
+       * Returns svg clipPath representation of an instance
+       * @param {Function} [reviver] Method for further parsing of svg representation.
+       * @return {String} svg representation of an instance
+       */
+      toClipPathSVG: function (reviver) {
+          var svgString = [];
+
+          for (var i = 0, len = this._objects.length; i < len; i++) {
+              svgString.push('\t', this._objects[i].toClipPathSVG(reviver));
+          }
+
+          return this._createBaseClipPathSVGMarkup(svgString, {reviver: reviver});
     },
     /* _TO_SVG_END_ */
   });

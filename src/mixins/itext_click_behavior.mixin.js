@@ -12,24 +12,29 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
 
     this.__lastPointer = { };
 
-    this.on('mousedown', this.onMouseDown.bind(this));
+      this.on('mousedown', this.onMouseDown);
   },
 
-  onMouseDown: function(options) {
-
-    this.__newClickTime = +new Date();
-    var newPointer = this.canvas.getPointer(options.e);
-
-    if (this.isTripleClick(newPointer, options.e)) {
-      this.fire('tripleclick', options);
-      this._stopEvent(options.e);
-    }
-    this.__lastLastClickTime = this.__lastClickTime;
-    this.__lastClickTime = this.__newClickTime;
-    this.__lastPointer = newPointer;
-    this.__lastIsEditing = this.isEditing;
-    this.__lastSelected = this.selected;
-  },
+    /**
+     * Default event handler to simulate triple click
+     * @private
+     */
+    onMouseDown: function(options) {
+        if (!this.canvas) {
+            return;
+        }
+        this.__newClickTime = +new Date();
+        var newPointer = options.pointer;
+        if (this.isTripleClick(newPointer)) {
+            this.fire('tripleclick', options);
+            this._stopEvent(options.e);
+        }
+        this.__lastLastClickTime = this.__lastClickTime;
+        this.__lastClickTime = this.__newClickTime;
+        this.__lastPointer = newPointer;
+        this.__lastIsEditing = this.isEditing;
+        this.__lastSelected = this.selected;
+    },
 
   isTripleClick: function(newPointer) {
     return this.__newClickTime - this.__lastClickTime < 500 &&
@@ -68,64 +73,96 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
   },
 
   /**
-   * Initializes "mousedown" event handler
+   * Default event handler for the basic functionalities needed on _mouseDown
+   * can be overridden to do something different.
+   * Scope of this implementation is: find the click position, set selectionStart
+   * find selectionEnd, initialize the drawing of either cursor or selection area
    */
-  initMousedownHandler: function () {
-    this.on('mousedown', function (options) {
-      if (!this.editable || (options.e.button && options.e.button !== 1)) {
-        return;
+  _mouseDownHandler: function (options) {
+      if (!this.canvas || !this.editable || (options.e.button && options.e.button !== 1)) {
+          return;
       }
-      var pointer = this.canvas.getPointer(options.e);
 
-      this.__mousedownX = pointer.x;
-      this.__mousedownY = pointer.y;
       this.__isMousedown = true;
 
       if (this.selected) {
-        this.setCursorByClick(options.e);
+          this.setCursorByClick(options.e);
       }
 
       if (this.isEditing) {
-        this.__selectionStartOnMouseDown = this.selectionStart;
-        if (this.selectionStart === this.selectionEnd) {
-          this.abortCursorAnimation();
-        }
-        this.renderCursorOrSelection();
+          this.__selectionStartOnMouseDown = this.selectionStart;
+          if (this.selectionStart === this.selectionEnd) {
+              this.abortCursorAnimation();
+          }
+          this.renderCursorOrSelection();
       }
-    });
   },
 
   /**
-   * @private
+   * Default event handler for the basic functionalities needed on mousedown:before
+   * can be overridden to do something different.
+   * Scope of this implementation is: verify the object is already selected when mousing down
    */
-  _isObjectMoved: function(e) {
-    var pointer = this.canvas.getPointer(e);
+  _mouseDownHandlerBefore: function (options) {
+      if (!this.canvas || !this.editable || (options.e.button && options.e.button !== 1)) {
+          return;
+      }
+      if (this === this.canvas._activeObject) {
+          this.selected = true;
+      }
+  },
 
-    return this.__mousedownX !== pointer.x ||
-           this.__mousedownY !== pointer.y;
+    /**
+     * Initializes "mousedown" event handler
+     */
+    initMousedownHandler: function () {
+        this.on('mousedown', this._mouseDownHandler);
+        this.on('mousedown:before', this._mouseDownHandlerBefore);
   },
 
   /**
    * Initializes "mouseup" event handler
    */
   initMouseupHandler: function() {
-    this.on('mouseup', function(options) {
-      this.__isMousedown = false;
-      if (!this.editable || this._isObjectMoved(options.e) || (options.e.button && options.e.button !== 1)) {
-        return;
-      }
+      this.on('mouseup', this.mouseUpHandler);
+  },
 
-      if (this.__lastSelected && !this.__corner) {
-        this.enterEditing(options.e);
-        if (this.selectionStart === this.selectionEnd) {
-          this.initDelayedCursor(true);
+    /**
+     * standard hander for mouse up, overridable
+     * @private
+     */
+    mouseUpHandler: function (options) {
+        this.__isMousedown = false;
+        if (!this.editable || this.group ||
+            (options.transform && options.transform.actionPerformed) ||
+            (options.e.button && options.e.button !== 1)) {
+            return;
+        }
+
+        if (this.canvas) {
+            var currentActive = this.canvas._activeObject;
+            if (currentActive && currentActive !== this) {
+                // avoid running this logic when there is an active object
+                // this because is possible with shift click and fast clicks,
+                // to rapidly deselect and reselect this object and trigger an enterEdit
+                return;
+            }
+        }
+
+        if (this.__lastSelected && !this.__corner) {
+            this.selected = false;
+            this.__lastSelected = false;
+            this.enterEditing(options.e);
+            if (this.selectionStart === this.selectionEnd) {
+                this.initDelayedCursor(true);
+            }
+            else {
+                this.renderCursorOrSelection();
+            }
         }
         else {
-          this.renderCursorOrSelection();
-        }
-      }
       this.selected = true;
-    });
+        }
   },
 
   /**

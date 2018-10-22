@@ -57,16 +57,15 @@
      * @return {fabric.Group}
      */
     toGroup: function() {
-      var objects = this._objects;
+        var objects = this._objects.concat();
       this._objects = [];
-      var options = this.toObject();
+        var options = fabric.Object.prototype.toObject.call(this);
       var newGroup = new fabric.Group([]);
-      delete options.objects;
+        delete options.type;
       newGroup.set(options);
-      newGroup.type = 'group';
       objects.forEach(function(object) {
-        object.group = newGroup;
         object.canvas.remove(object);
+          object.group = newGroup;
       });
       newGroup._objects = objects;
       if (!this.canvas) {
@@ -98,25 +97,6 @@
     },
 
     /**
-     * @private
-     */
-    _set: function(key, value) {
-      var i = this._objects.length;
-      if (key === 'canvas') {
-        while (i--) {
-          this._objects[i].set(key, value);
-        }
-      }
-      if (this.useSetOnGroup) {
-        i = this._objects.length;
-        while (i--) {
-          this._objects[i].setOnGroup(key, value);
-        }
-      }
-      fabric.Object.prototype._set.call(this, key, value);
-    },
-
-    /**
      * Decide if the object should cache or not. Create its own cache level
      * objectCaching is a global flag, wins over everything
      * needsItsOwnCache should be used when the object drawing method requires
@@ -129,31 +109,11 @@
     },
 
     /**
-     * Check if this object or a child object will cast a shadow
-     * @return {Boolean}
-     */
-    willDrawShadow: function() {
-      if (this.shadow) {
-        return this.callSuper('willDrawShadow');
-      }
-      for (var i = 0, len = this._objects.length; i < len; i++) {
-        if (this._objects[i].willDrawShadow()) {
-          return true;
-        }
-      }
-      return false;
-    },
-
-    /**
      * Check if this group or its parent group are caching, recursively up
      * @return {Boolean}
      */
     isOnACache: function() {
       return false;
-    },
-
-    getObjects: function () {
-      return this._objects;
     },
 
     /**
