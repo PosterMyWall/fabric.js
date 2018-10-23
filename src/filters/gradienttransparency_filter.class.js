@@ -7,6 +7,7 @@
         createClass = fabric.util.createClass;
 
     /**
+     * Postermywall: This filter is not supported by fabricjs, any change any logic updates on how to apply
      * GradientTransparency filter class
      * @class fabric.Image.filters.GradientTransparency
      * @memberOf fabric.Image.filters
@@ -74,6 +75,15 @@
             for (var i = 0, len = data.length; i < len; i += 4) {
                 data[i + 3] = threshold + 255 * (total - i) / total;
             }
+        },
+
+        /**
+         * gradient filter isNeutralState implementation
+         * The filter is never neutral
+         * on the image
+         **/
+        isNeutralState: function () {
+            return false;
         },
 
         /**
