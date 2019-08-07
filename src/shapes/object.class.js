@@ -594,8 +594,7 @@
      * @type Boolean
      * @default true
      */
-    objectCaching: false,
-    // objectCaching:            objectCaching,
+    objectCaching: objectCaching,
 
     /**
      * When `true`, object properties are checked for cache invalidation. In some particular
