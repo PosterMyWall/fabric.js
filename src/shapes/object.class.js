@@ -163,18 +163,20 @@
     skewY:                    0,
 
     /**
+     * *PMW* changed default value to meet our standards
      * Size of object's controlling corners (in pixels)
      * @type Number
      * @default
      */
-    cornerSize:               13,
+    cornerSize:               22,
 
     /**
+     * *PMW* changed default value to meet our standards
      * When true, object's controlling corners are rendered as transparent inside (i.e. stroke instead of fill)
      * @type Boolean
      * @default
      */
-    transparentCorners:       true,
+    transparentCorners:       false,
 
     /**
      * Default cursor value used when hovering over this object on canvas
@@ -191,18 +193,20 @@
     moveCursor:               null,
 
     /**
+     * *PMW* changed default value to meet our standards
      * Padding between object and its controlling borders (in pixels)
      * @type Number
      * @default
      */
-    padding:                  0,
+    padding:                  11,
 
     /**
+     * *PMW* changed default value to meet our standards
      * Color of controlling borders of an object (when it's active)
      * @type String
      * @default
      */
-    borderColor:              'rgba(102,153,255,0.75)',
+    borderColor:              'rgba(63,188,231,1)',
 
     /**
      * Array specifying dash pattern of an object's borders (hasBorder must be true)
@@ -212,19 +216,37 @@
     borderDashArray:          null,
 
     /**
+     * *PMW* changed default value to meet our standards
      * Color of controlling corners of an object (when it's active)
      * @type String
      * @default
      */
-    cornerColor:              'rgba(102,153,255,0.5)',
+    cornerColor:              'rgba(255,255,255,1)',
 
     /**
+     * *PMW* new property
+     * PosterMyWall property for the width of the button.
+     * @type Number
+     * @default
+     */
+    buttonWidth: 92,
+
+    /**
+     * *PMW* new property
+     * PosterMyWall property for the default text of the button.
+     * @type String
+     * @default
+     */
+    buttonText: '',
+
+    /**
+     * *PMW* changed default value to meet our standards
      * Color of controlling corners of an object (when it's active and transparentCorners false)
      * @since 1.6.2
      * @type String
      * @default
      */
-    cornerStrokeColor:        null,
+    cornerStrokeColor:        'rgba(63,188,231,1)',
 
     /**
      * Specify style of control, 'rect' or 'circle'
@@ -357,11 +379,12 @@
     shadow:                   null,
 
     /**
+     * *PMW* changed default value to meet our standards
      * Opacity of object's controlling borders when object is active and moving
      * @type Number
      * @default
      */
-    borderOpacityWhenMoving:  0.4,
+    borderOpacityWhenMoving:  1,
 
     /**
      * Scale factor of object's controlling borders
@@ -520,11 +543,12 @@
     lockSkewingY:             false,
 
     /**
+     * *PMW* changed default value to meet our standards
      * When `true`, object cannot be flipped by scaling into negative values
      * @type Boolean
      * @default
      */
-    lockScalingFlip:          false,
+    lockScalingFlip:          true,
 
     /**
      * When `true`, object is not exported in OBJECT/JSON
@@ -1061,6 +1085,7 @@
      * @return {Boolean}
      */
     isNotVisible: function() {
+      //CodeReviewHamza: See if this will cause issues with shapes having opacity 0 but still borders visible
       return this.opacity === 0 ||
         (this.width === 0 && this.height === 0 && this.strokeWidth === 0) ||
         !this.visible;
@@ -2001,7 +2026,60 @@
         y: pClicked.y - objectLeftTop.y
       };
     },
+    /**
+     * *PMW*
+     * This function returns corner points of the object relative to the given center.
+     * @param {Object} center center of object
+     * @returns {{tl: ({x: number, y: number}|*), tr: ({x: number, y: number}|*), bl: ({x: number, y: number}|*), br: ({x: number, y: *}|*)}}
+     */
+    getCornerPoints: function (center) {
+      var angle = this.angle,
+        width = (this.width + this.strokeWidth)  * this.scaleX,
+        height = (this.height + this.strokeWidth) * this.scaleY,
 
+        tl, tr, bl, br,
+        // coordinates of the center point
+        x = center.x,
+        y = center.y,
+        theta = fabric.util.degreesToRadians(angle);
+
+      if (width < 0) {
+        width = Math.abs(width);
+      }
+
+      var sinTh = Math.sin(theta),
+        cosTh = Math.cos(theta),
+        _angle = width > 0 ? Math.atan(height / width) : 0,
+        _hypotenuse = (width / Math.cos(_angle)) / 2,
+        offsetX = Math.cos(_angle + theta) * _hypotenuse,
+        offsetY = Math.sin(_angle + theta) * _hypotenuse;
+
+      tl = {
+        x: x - offsetX,
+        y: y - offsetY
+      };
+
+      tr = {
+        x: (x - offsetX) + (width * cosTh),
+        y: (y - offsetY) + (width * sinTh)
+      };
+
+      br = {
+        x: x + offsetX,
+        y: y + offsetY
+      };
+
+      bl = {
+        x: (x - offsetX) - (height * sinTh),
+        y: (y - offsetY) + (height * cosTh)
+      };
+      return {
+        tl: tl,
+        tr: tr,
+        bl: bl,
+        br: br
+      };
+    },
     /**
      * Sets canvas globalCompositeOperation for specific object
      * custom composition operation for the particular object can be specified using globalCompositeOperation property

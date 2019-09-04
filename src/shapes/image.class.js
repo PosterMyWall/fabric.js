@@ -460,6 +460,11 @@
           sourceWidth = imgElement.naturalWidth || imgElement.width,
           sourceHeight = imgElement.naturalHeight || imgElement.height;
 
+      //*PMW* Return here because filters need to be applied on each frame render for videos
+      if (imgElement.nodeName === 'VIDEO') {
+        return this;
+      }
+
       if (this._element === this._originalElement) {
         // if the element is the same we need to create a new element
         var canvasEl = fabric.util.createCanvasElement();
@@ -526,9 +531,65 @@
           sX = Math.max(0, this.cropX * this._filterScalingX),
           sY = Math.max(0, this.cropY * this._filterScalingY);
 
+      //*PMW* if vidoe apply filter on each frame draw
+      if (this._element.nodeName === 'VIDEO') {
+        elementToDraw = this._applyVideoFilter(this._element);
+      }
+
       elementToDraw && ctx.drawImage(elementToDraw, sX, sY, sW, sH, x, y, w, h);
     },
 
+    /**
+     * *PMW* function added
+     * Applies filter of video element using webgl backend
+     * @param elementToDraw
+     * @return {*|CanvasElement}
+     * @private
+     */
+    _applyVideoFilter: function (elementToDraw) {
+      var filters = this.filters || [];
+      filters = filters.filter(function (filter) {
+        return filter;
+      });
+
+      if (filters.length === 0) {
+        this._element = this._originalElement;
+        this._filteredEl = null;
+        this._filterScalingX = 1;
+        this._filterScalingY = 1;
+        return this._element;
+      }
+
+      var videoEl = elementToDraw,
+        sourceWidth = videoEl.naturalWidth || videoEl.width,
+        sourceHeight = videoEl.naturalHeight || videoEl.height;
+
+      if (this._element === videoEl) {
+        // if the element is the same we need to create a new element
+        var canvasEl = fabric.util.createCanvasElement();
+        canvasEl.width = sourceWidth;
+        canvasEl.height = sourceHeight;
+        this._element = canvasEl;
+        this._filteredEl = canvasEl;
+      }
+      else {
+        // clear the existing element to get new filter data
+        this._element.getContext('2d').clearRect(0, 0, sourceWidth, sourceHeight);
+      }
+
+      if (!fabric.filterBackend) {
+        fabric.filterBackend = fabric.initFilterBackend();
+      }
+
+      fabric.filterBackend.applyFilters(filters, this._originalElement, sourceWidth, sourceHeight, this._element, false);
+      if (this._originalElement.width !== this._element.width ||
+        this._originalElement.height !== this._element.height) {
+        this._filterScalingX = this._element.width / this._originalElement.width;
+        this._filterScalingY = this._element.height / this._originalElement.height;
+      }
+      this._element = videoEl;
+      return canvasEl;
+    },
     /**
      * @private, needed to check if image needs resize
      */

@@ -202,6 +202,7 @@ var filesToInclude = [
   ifSpecifiedInclude('image_filters', 'src/filters/colormatrix_filter.class.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/brightness_filter.class.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/convolute_filter.class.js'),
+  ifSpecifiedInclude('image_filters', 'src/filters/gradienttransparency_filter.class.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/grayscale_filter.class.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/invert_filter.class.js'),
   ifSpecifiedInclude('image_filters', 'src/filters/noise_filter.class.js'),
@@ -228,6 +229,11 @@ var filesToInclude = [
   ifSpecifiedInclude('itext', 'src/mixins/itext.svg_export.js'),
 
   ifSpecifiedInclude('textbox', 'src/shapes/textbox.class.js'),
+  ifSpecifiedInclude('textbox', 'src/mixins/textbox_behavior.mixin.js'),
+
+  ifSpecifiedInclude('tabs', 'src/shapes/tabs.class.js'),
+  ifSpecifiedInclude('table', 'src/shapes/table.class.js'),
+  ifSpecifiedInclude('menu', 'src/shapes/menu.class.js'),
 
 ];
 

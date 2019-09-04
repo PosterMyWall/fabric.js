@@ -188,7 +188,25 @@
       }
       return true;
     },
-
+    /**
+     * *PMW* new function
+     * When part of a group, we don't want the Textbox's scale to increase if
+     * the group's increases. That's why we reduce the scale of the Textbox by
+     * the amount that the group's increases. This is to maintain the effective
+     * scale of the Textbox at 1, so that font-size values make sense. Otherwise
+     * the same font-size value would result in different actual size depending
+     * on the value of the scale.
+     * @param {String} key
+     * @param {Any} value
+     */
+    setOnGroup: function (key, value) {
+      if (key === 'scaleX') {
+        this.set('scaleX', Math.abs(1 / value));
+      }
+      if (key == 'scaleY') {
+        this.set('scaleY', Math.abs(1 / value));
+      }
+    },
     /**
      * @param {Number} lineIndex
      * @param {Number} charIndex

@@ -1,4 +1,4 @@
-(function() {
+(function () {
 
   var degreesToRadians = fabric.util.degreesToRadians;
 
@@ -16,7 +16,7 @@
      * @param {Object} pointer The pointer indicating the mouse position
      * @return {String|Boolean} corner code (tl, tr, bl, br, etc.), or false if nothing is found
      */
-    _findTargetCorner: function(pointer) {
+    _findTargetCorner: function (pointer) {
       // objects in group, anykind, are not self modificable,
       // must not return an hovered corner.
       if (!this.hasControls || this.group || (!this.canvas || this.canvas._activeObject !== this)) {
@@ -24,9 +24,9 @@
       }
 
       var ex = pointer.x,
-          ey = pointer.y,
-          xPoints,
-          lines;
+        ey = pointer.y,
+        xPoints,
+        lines;
       this.__corner = 0;
       for (var i in this.oCoords) {
 
@@ -39,7 +39,7 @@
         }
 
         if (this.get('lockUniScaling') &&
-           (i === 'mt' || i === 'mr' || i === 'mb' || i === 'ml')) {
+          (i === 'mt' || i === 'mr' || i === 'mb' || i === 'ml')) {
           continue;
         }
 
@@ -59,7 +59,7 @@
         // canvas.contextTop.fillRect(lines.rightline.d.x, lines.rightline.d.y, 2, 2);
         // canvas.contextTop.fillRect(lines.rightline.o.x, lines.rightline.o.y, 2, 2);
 
-        xPoints = this._findCrossPoints({ x: ex, y: ey }, lines);
+        xPoints = this._findCrossPoints({x: ex, y: ey}, lines);
         if (xPoints !== 0 && xPoints % 2 === 1) {
           this.__corner = i;
           return i;
@@ -73,37 +73,77 @@
      * the image used to scale/rotate it.
      * @private
      */
-    _setCornerCoords: function() {
+    _setCornerCoords: function () {
       var coords = this.oCoords,
-          newTheta = degreesToRadians(45 - this.angle),
-          /* Math.sqrt(2 * Math.pow(this.cornerSize, 2)) / 2, */
-          /* 0.707106 stands for sqrt(2)/2 */
-          cornerHypotenuse = this.cornerSize * 0.707106,
-          cosHalfOffset = cornerHypotenuse * fabric.util.cos(newTheta),
-          sinHalfOffset = cornerHypotenuse * fabric.util.sin(newTheta),
-          x, y;
+        newTheta = degreesToRadians(45 - this.angle),
+        /* Math.sqrt(2 * Math.pow(this.cornerSize, 2)) / 2, */
+        /* 0.707106 stands for sqrt(2)/2 */
+        cornerHypotenuse = this.cornerSize * 0.707106,
+        cosHalfOffset = cornerHypotenuse * fabric.util.cos(newTheta),
+        sinHalfOffset = cornerHypotenuse * fabric.util.sin(newTheta),
+        x, y;
 
       for (var point in coords) {
         x = coords[point].x;
         y = coords[point].y;
-        coords[point].corner = {
-          tl: {
-            x: x - sinHalfOffset,
-            y: y - cosHalfOffset
-          },
-          tr: {
-            x: x + cosHalfOffset,
-            y: y - sinHalfOffset
-          },
-          bl: {
-            x: x - cosHalfOffset,
-            y: y + sinHalfOffset
-          },
-          br: {
-            x: x + sinHalfOffset,
-            y: y + cosHalfOffset
+
+        //*PMW*: pmw btn set coords code
+        if (point === 'btn') {
+          // bw and bh are replace button dimensions.
+          var bw = this.buttonWidth,
+            bh = this.cornerSize,
+            theta = degreesToRadians(this.angle);
+
+          if (bw < 0) {
+            bw = Math.abs(bw);
           }
-        };
+
+          var sinTh = Math.sin(theta),
+            cosTh = Math.cos(theta),
+            _angle = bw > 0 ? Math.atan(bh / bw) : 0,
+            _hypotenuse = (bw / Math.cos(_angle)) / 2,
+            offsetX = Math.cos(_angle + theta) * _hypotenuse,
+            offsetY = Math.sin(_angle + theta) * _hypotenuse;
+
+          coords[point].corner = {
+            tl: {
+              x: x - offsetX,
+              y: y - offsetY
+            },
+            tr: {
+              x: (x - offsetX) + (bw * cosTh),
+              y: (y - offsetY) + (bw * sinTh)
+            },
+            bl: {
+              x: (x - offsetX) - (bh * sinTh),
+              y: (y - offsetY) + (bh * cosTh)
+            },
+            br: {
+              x: x + offsetX,
+              y: y + offsetY
+            }
+          };
+        }
+        else {
+          coords[point].corner = {
+            tl: {
+              x: x - sinHalfOffset,
+              y: y - cosHalfOffset
+            },
+            tr: {
+              x: x + cosHalfOffset,
+              y: y - sinHalfOffset
+            },
+            bl: {
+              x: x - cosHalfOffset,
+              y: y + sinHalfOffset
+            },
+            br: {
+              x: x + sinHalfOffset,
+              y: y + cosHalfOffset
+            }
+          };
+        }
       }
     },
 
@@ -116,7 +156,7 @@
      * @return {fabric.Object} thisArg
      * @chainable
      */
-    drawSelectionBackground: function(ctx) {
+    drawSelectionBackground: function (ctx) {
       if (!this.selectionBackgroundColor ||
         (this.canvas && !this.canvas.interactive) ||
         (this.canvas && this.canvas._activeObject !== this)
@@ -125,7 +165,7 @@
       }
       ctx.save();
       var center = this.getCenterPoint(), wh = this._calculateCurrentDimensions(),
-          vpt = this.canvas.viewportTransform;
+        vpt = this.canvas.viewportTransform;
       ctx.translate(center.x, center.y);
       ctx.scale(1 / vpt[0], 1 / vpt[3]);
       ctx.rotate(degreesToRadians(this.angle));
@@ -144,21 +184,23 @@
      * @return {fabric.Object} thisArg
      * @chainable
      */
-    drawBorders: function(ctx, styleOverride) {
+    drawBorders: function (ctx, styleOverride) {
       styleOverride = styleOverride || {};
       var wh = this._calculateCurrentDimensions(),
-          strokeWidth = 1 / this.borderScaleFactor,
-          width = wh.x + strokeWidth,
-          height = wh.y + strokeWidth,
-          drawRotatingPoint = typeof styleOverride.hasRotatingPoint !== 'undefined' ?
-            styleOverride.hasRotatingPoint : this.hasRotatingPoint,
-          hasControls = typeof styleOverride.hasControls !== 'undefined' ?
-            styleOverride.hasControls : this.hasControls,
-          rotatingPointOffset = typeof styleOverride.rotatingPointOffset !== 'undefined' ?
-            styleOverride.rotatingPointOffset : this.rotatingPointOffset;
+        strokeWidth = 1 / this.borderScaleFactor,
+        width = wh.x + strokeWidth,
+        height = wh.y + strokeWidth,
+        drawRotatingPoint = typeof styleOverride.hasRotatingPoint !== 'undefined' ?
+          styleOverride.hasRotatingPoint : this.hasRotatingPoint,
+        hasControls = typeof styleOverride.hasControls !== 'undefined' ?
+          styleOverride.hasControls : this.hasControls,
+        rotatingPointOffset = typeof styleOverride.rotatingPointOffset !== 'undefined' ?
+          styleOverride.rotatingPointOffset : this.rotatingPointOffset;
 
       ctx.save();
       ctx.strokeStyle = styleOverride.borderColor || this.borderColor;
+      //*PMW* changing default stroke width for border from 1 to 2
+      ctx.lineWidth = 2 / this.borderScaleFactor;
       this._setLineDash(ctx, styleOverride.borderDashArray || this.borderDashArray, null);
 
       ctx.strokeRect(
@@ -192,18 +234,20 @@
      * @return {fabric.Object} thisArg
      * @chainable
      */
-    drawBordersInGroup: function(ctx, options, styleOverride) {
+    drawBordersInGroup: function (ctx, options, styleOverride) {
       styleOverride = styleOverride || {};
       var p = this._getNonTransformedDimensions(),
-          matrix = fabric.util.customTransformMatrix(options.scaleX, options.scaleY, options.skewX),
-          wh = fabric.util.transformPoint(p, matrix),
-          strokeWidth = 1 / this.borderScaleFactor,
-          width = wh.x + strokeWidth,
-          height = wh.y + strokeWidth;
+        matrix = fabric.util.customTransformMatrix(options.scaleX, options.scaleY, options.skewX),
+        wh = fabric.util.transformPoint(p, matrix),
+        strokeWidth = 1 / this.borderScaleFactor,
+        width = wh.x + strokeWidth,
+        height = wh.y + strokeWidth;
 
       ctx.save();
       this._setLineDash(ctx, styleOverride.borderDashArray || this.borderDashArray, null);
       ctx.strokeStyle = styleOverride.borderColor || this.borderColor;
+      //*PMW* changing default stroke width for border from 1 to 2*
+      ctx.lineWidth = 2;
 
       ctx.strokeRect(
         -width / 2,
@@ -225,26 +269,41 @@
      * @return {fabric.Object} thisArg
      * @chainable
      */
-    drawControls: function(ctx, styleOverride) {
+    drawControls: function (ctx, styleOverride) {
       styleOverride = styleOverride || {};
       var wh = this._calculateCurrentDimensions(),
-          width = wh.x,
-          height = wh.y,
-          scaleOffset = styleOverride.cornerSize || this.cornerSize,
-          left = -(width + scaleOffset) / 2,
-          top = -(height + scaleOffset) / 2,
-          transparentCorners = typeof styleOverride.transparentCorners !== 'undefined' ?
-            styleOverride.transparentCorners : this.transparentCorners,
-          hasRotatingPoint = typeof styleOverride.hasRotatingPoint !== 'undefined' ?
-            styleOverride.hasRotatingPoint : this.hasRotatingPoint,
-          methodName = transparentCorners ? 'stroke' : 'fill';
+        width = wh.x,
+        height = wh.y,
+        scaleOffset = styleOverride.cornerSize || this.cornerSize,
+        left = -(width + scaleOffset) / 2,
+        top = -(height + scaleOffset) / 2,
+        transparentCorners = typeof styleOverride.transparentCorners !== 'undefined' ?
+          styleOverride.transparentCorners : this.transparentCorners,
+        hasRotatingPoint = typeof styleOverride.hasRotatingPoint !== 'undefined' ?
+          styleOverride.hasRotatingPoint : this.hasRotatingPoint,
+        methodName = transparentCorners ? 'stroke' : 'fill';
 
       ctx.save();
+      //*PMW* changing default stroke width for controls from 1 to 2*
+      ctx.lineWidth = 2;
       ctx.strokeStyle = ctx.fillStyle = styleOverride.cornerColor || this.cornerColor;
       if (!this.transparentCorners) {
         ctx.strokeStyle = styleOverride.cornerStrokeColor || this.cornerStrokeColor;
       }
       this._setLineDash(ctx, styleOverride.cornerDashArray || this.cornerDashArray, null);
+
+      // *PMW* Draw controls for our custom buttons
+      this._drawControl('btn', ctx, methodName,
+        left + width / 2,
+        top + height, styleOverride);
+
+      this._drawControl('pmwBtnMr', ctx, methodName,
+        left + width,
+        top + height / 2, styleOverride);
+
+      this._drawControl('pmwBtnMl', ctx, methodName,
+        left,
+        top + height / 2, styleOverride);
 
       // top-left
       this._drawControl('tl', ctx, methodName,
@@ -304,7 +363,7 @@
     /**
      * @private
      */
-    _drawControl: function(control, ctx, methodName, left, top, styleOverride) {
+    _drawControl: function (control, ctx, methodName, left, top, styleOverride) {
       styleOverride = styleOverride || {};
       if (!this.isControlVisible(control)) {
         return;
@@ -321,9 +380,91 @@
           break;
         default:
           this.transparentCorners || ctx.clearRect(left, top, size, size);
-          ctx[methodName + 'Rect'](left, top, size, size);
-          if (stroke) {
-            ctx.strokeRect(left, top, size, size);
+          //*PMW* Changing draw controls to meet our styles
+          switch (control) {
+            case 'mtr':
+              // first draw the circle
+              ctx.beginPath();
+              ctx.arc(left + 11, top + 11, (size / 2) + 5, 0, 2 * Math.PI);
+              ctx.fill();
+
+              /*
+               * Save state since the arrow inside the circle will have a thinner lineWidth
+               * and no shadow.
+               */
+              ctx.save();
+              ctx.lineWidth = 1;
+              ctx.shadowColor = 'transparent';
+
+              /*
+               * Since the arrow is sourced from an SVG path, it needs to be translated
+               * a bit to make it appear in the right place. The constants added to the
+               * left and top values below are to center the arrow inside the circle.
+               */
+              ctx.translate(left + 1, top - (2 * this.rotatingPointOffset) + 2);
+              ctx.lineCap = 'butt';
+              ctx.lineJoin = 'miter';
+              ctx.miterLimit = 4;
+
+              /*
+               * Draw the circular arrow. The original SVG is at https://thenounproject.com/term/rotate/66368/
+               * We're using a modified version that requires minimal translation and
+               * no scaling.
+               */
+              ctx.beginPath();
+              ctx.moveTo(10.5, 79);
+              ctx.bezierCurveTo(6.8935664, 79, 3.5763253, 80.838639, 1.6541928, 83.84594);
+              ctx.lineTo(1.0462049, 80.85812);
+              ctx.lineTo(0.30184339, 81.010181);
+              ctx.lineTo(1.2116748, 85.477108);
+              ctx.lineTo(5.6001688, 84.245446);
+              ctx.lineTo(5.395482, 83.513735);
+              ctx.lineTo(2.1941205, 84.41294);
+              ctx.bezierCurveTo(3.9611567, 81.529362, 7.0911688, 79.759036, 10.5, 79.759036);
+              ctx.bezierCurveTo(15.871193, 79.759036, 20.240963999999998, 84.128807, 20.240963999999998, 89.5);
+              ctx.bezierCurveTo(20.240963999999998, 94.871193, 15.871192999999998, 99.240964, 10.499999999999998, 99.240964);
+              ctx.bezierCurveTo(5.128807299999998, 99.240964, 0.7590361499999982, 94.871193, 0.7590361499999982, 89.5);
+              ctx.lineTo(0, 89.5);
+              ctx.bezierCurveTo(0, 95.289675, 4.7103253, 100, 10.5, 100);
+              ctx.bezierCurveTo(16.289674, 100, 21, 95.289675, 21, 89.5);
+              ctx.bezierCurveTo(21, 83.710325, 16.289674, 79, 10.5, 79);
+              ctx.closePath();
+              ctx.fill();
+              ctx.stroke();
+              ctx.restore();
+              break;
+
+            case 'btn':
+              // 36px is related to the default width of the button
+              var bLeft = left - 36, bTop = top;
+              // If the object is small enough to result in overlapping of corners and the button, push the button down
+              if ((this.width * this.scaleX) < (this.buttonWidth + 2 * this.cornerSize)) {
+                // extra 4px to add some empty space between corners and the button
+                bTop += this.cornerSize + 4;
+              }
+              ctx[methodName + 'Rect'](bLeft, bTop, this.buttonWidth, size);
+              ctx.strokeRect(bLeft, bTop, this.buttonWidth, size);
+
+              ctx.save();
+              ctx.font = '13px sans-serif';
+              ctx.fillStyle = this.borderColor;
+              // 5px padding of text from the left edge. 14px adjustment which depends on the font size and baseline of the text
+              // left position is calculated in order to horizontally center the text inside button
+              ctx.fillText(this.buttonText, bLeft + (this.buttonWidth - ctx.measureText(this.buttonText).width) / 2, bTop + 15);
+              ctx.restore();
+              break;
+
+            case 'pmwBtnMr':
+            case 'pmwBtnMl':
+              ctx[methodName + 'Rect'](left, top, size, size);
+              ctx.strokeRect(left, top, size, size);
+              break;
+
+            default:
+              ctx[methodName + 'Rect'](left, top, size, size);
+              if (stroke) {
+                ctx.strokeRect(left, top, size, size);
+              }
           }
       }
     },
@@ -333,7 +474,7 @@
      * @param {String} controlName The name of the control. Possible values are 'tl', 'tr', 'br', 'bl', 'ml', 'mt', 'mr', 'mb', 'mtr'.
      * @returns {Boolean} true if the specified control is visible, false otherwise
      */
-    isControlVisible: function(controlName) {
+    isControlVisible: function (controlName) {
       return this._getControlsVisibility()[controlName];
     },
 
@@ -344,7 +485,7 @@
      * @return {fabric.Object} thisArg
      * @chainable
      */
-    setControlVisible: function(controlName, visible) {
+    setControlVisible: function (controlName, visible) {
       this._getControlsVisibility()[controlName] = visible;
       return this;
     },
@@ -364,8 +505,8 @@
      * @return {fabric.Object} thisArg
      * @chainable
      */
-    setControlsVisibility: function(options) {
-      options || (options = { });
+    setControlsVisibility: function (options) {
+      options || (options = {});
 
       for (var p in options) {
         this.setControlVisible(p, options[p]);
@@ -378,18 +519,22 @@
      * @private
      * @returns {Object}
      */
-    _getControlsVisibility: function() {
+    _getControlsVisibility: function () {
       if (!this._controlsVisibility) {
         this._controlsVisibility = {
           tl: true,
           tr: true,
           br: true,
           bl: true,
-          ml: true,
-          mt: true,
-          mr: true,
-          mb: true,
-          mtr: true
+          ml: false,
+          mt: false,
+          mr: false,
+          mb: false,
+          mtr: true,
+          //*PMW* buttons added by us
+          btn: false,
+          pmwBtnMr: false,
+          pmwBtnMl: false
         };
       }
       return this._controlsVisibility;
@@ -401,7 +546,7 @@
      * @param {Object} [options] options sent from the upper functions
      * @param {Event} [options.e] event if the process is generated by an event
      */
-    onDeselect: function() {
+    onDeselect: function () {
       // implemented by sub-classes, as needed.
     },
 
@@ -412,7 +557,7 @@
      * @param {Object} [options] options sent from the upper functions
      * @param {Event} [options.e] event if the process is generated by an event
      */
-    onSelect: function() {
+    onSelect: function () {
       // implemented by sub-classes, as needed.
     }
   });

@@ -555,11 +555,16 @@
       target.setCoords();
 
       if (transform.actionPerformed || (this.stateful && target.hasStateChanged())) {
-        if (transform.actionPerformed) {
-          eventName = this._addEventOptions(options, transform);
-          this._fire(eventName, options);
+        //*PMW* Handling pmw width modifier buttons
+        if (transform.corner == 'pmwBtnMr' || transform.corner == 'pmwBtnMl') {
+          target.fire('widthModified');
+        }else {
+          if (transform.actionPerformed) {
+            eventName = this._addEventOptions(options, transform);
+            this._fire(eventName, options);
+          }
+          this._fire('modified', options);
         }
-        this._fire('modified', options);
       }
     },
 
@@ -763,6 +768,12 @@
       if (t.corner) {
         this.onBeforeScaleRotate(t.target);
       }
+
+      //*PMW* fire btn:clicked event when btn is clicked
+      var c = t.target._findTargetCorner(this.getPointer(e, true));
+      if (c === 'btn') {
+        t.target.fire('btn:clicked', {target: t.target, e: e});
+      }
     },
 
     /**
@@ -920,6 +931,16 @@
       if (action === 'rotate') {
         (actionPerformed = this._rotateObject(x, y)) && this._fire('rotating', options);
       }
+      //*PMW* Handling transform using our pmw width modifier buttons
+      else if (action === 'scale' && transform.corner === 'pmwBtnMr') {
+        transform.target.dirty = true;
+        this._fire('pmwBtnMr:modifyingWidth', options);
+        actionPerformed = true;
+      }
+      else if (action === 'scale' && transform.corner === 'pmwBtnMl') {
+        this._fire('pmwBtnMl:modifyingWidth', options);
+        actionPerformed = true;
+      }
       else if (action === 'scale') {
         (actionPerformed = this._onScale(e, transform, x, y)) && this._fire('scaling', options);
       }
@@ -1043,6 +1064,16 @@
       }
       else if (corner === 'mtr' && target.hasRotatingPoint) {
         return this.rotationCursor;
+      }
+      //*PMW* Handling cursor look on our buttons
+      else if (corner === 'btn') {
+        return 'pointer';
+      }
+      else if (corner === 'pmwBtnMr') {
+        return 'e-resize';
+      }
+      else if (corner === 'pmwBtnMl') {
+        return 'w-resize';
       }
       else {
         return this.defaultCursor;

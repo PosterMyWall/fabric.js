@@ -358,7 +358,29 @@
       this.cursorOffsetCache = boundaries;
       return this.cursorOffsetCache;
     },
+    /**
+     * *PMW*
+     * Draws a background for the object big as its untrasformed dimensions
+     * @private
+     * @param {CanvasRenderingContext2D} ctx Context to render on
+     */
+    _renderBackground: function (ctx) {
+      if (!this.backgroundColor) {
+        return;
+      }
+      var dim = this._getNonTransformedDimensions();
+      ctx.fillStyle = this.backgroundColor;
 
+      ctx.fillRect(
+        -dim.x / 2 - this.padding,
+        -dim.y / 2 - this.padding,
+        dim.x + this.padding * 2,
+        dim.y + this.padding * 2
+      );
+      // if there is background color no other shadows
+      // should be casted
+      this._removeShadow(ctx);
+    },
     /**
      * Renders cursor
      * @param {Object} boundaries

@@ -450,6 +450,25 @@
         // rotating point
         coords.mtr = mtr;
       }
+
+      //*PMW* the below two ifs are for pmw buttons
+      if (this.isControlVisible('btn')) {
+        // In case replace button is pushed down due to overlapping of corners,
+        // 50 is added to the currentHeight to ensure that selectable area of replace button is shifted accordingly.
+        var currentHeight = this._calculateCurrentDimensions().y,
+          center = this.getCenterPoint(),
+          btnCoords = absolute ? center : fabric.util.transformPoint(center, vpt);
+        if ((this.width * this.scaleX) < (this.buttonWidth + 2 * this.cornerSize)) {
+          currentHeight = currentHeight + 50;
+        }
+        coords.btn = new fabric.Point(btnCoords.x - (sin * ((currentHeight) / 2)), btnCoords.y + (cos * ((currentHeight) / 2)));
+
+      }
+
+      if(this.isControlVisible('pmwBtnMr') || this.isControlVisible('pmwBtnMl')) {
+        coords.pmwBtnMr = mr;
+        coords.pmwBtnMl = ml;
+      }
       return coords;
     },
 

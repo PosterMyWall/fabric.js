@@ -796,7 +796,8 @@
       var lineHeight, height = 0;
       for (var i = 0, len = this._textLines.length; i < len; i++) {
         lineHeight = this.getHeightOfLine(i);
-        height += (i === len - 1 ? lineHeight / this.lineHeight : lineHeight);
+        //*PMW* commenting out the code that prevent text box from applying line height on the last line. This caused line height to not work in table and menus
+        height += lineHeight;//(i === len - 1 ? lineHeight / this.lineHeight : lineHeight);
       }
       return height;
     },
@@ -1113,10 +1114,11 @@
     },
 
     _getWidthOfCharSpacing: function() {
-      if (this.charSpacing !== 0) {
-        return this.fontSize * this.charSpacing / 1000;
-      }
-      return 0;
+      //*PMW* change char spacing to be applied the same on every size
+      // if (this.charSpacing !== 0) {
+      //   return this.fontSize * this.charSpacing / 1000;
+      // }
+      return this.charSpacing;
     },
 
     /**
