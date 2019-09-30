@@ -88,6 +88,7 @@
         eventjs[eventjsFunctor](canvasElement, 'orientation', this._onOrientationChange);
         eventjs[eventjsFunctor](canvasElement, 'shake', this._onShake);
         eventjs[eventjsFunctor](canvasElement, 'longpress', this._onLongPress);
+        eventjs[eventjsFunctor](canvasElement, 'dbltap', this._onDoubleTap);
       }
     },
 
@@ -122,6 +123,8 @@
       this._onDrag = this._onDrag.bind(this);
       this._onShake = this._onShake.bind(this);
       this._onLongPress = this._onLongPress.bind(this);
+      //*PMW* Added support for doubletap
+      this._onDoubleTap = this._onDoubleTap.bind(this);
       this._onOrientationChange = this._onOrientationChange.bind(this);
       this._onMouseWheel = this._onMouseWheel.bind(this);
       this._onMouseOut = this._onMouseOut.bind(this);
@@ -244,6 +247,15 @@
         e.preventDefault();
       }
       return false;
+    },
+
+    /**
+     * @private
+     * @param {Event} [e] Event object fired on Event.js shake
+     * @param {Event} [self] Inner Event object
+     */
+    _onDoubleTap: function (e, self) {
+      this.__onDoubleTap && this.__onDoubleTap(e, self);
     },
 
     /**

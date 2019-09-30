@@ -191,7 +191,8 @@ fabric.forceGLPutImageData = false;
 
 fabric.initFilterBackend = function() {
   if (fabric.enableGLFiltering && fabric.isWebglSupported && fabric.isWebglSupported(fabric.textureSize)) {
-    console.log('max texture size: ' + fabric.maxTextureSize);
+    //*PMW* Don't out the console log
+    // console.log('max texture size: ' + fabric.maxTextureSize);
     return (new fabric.WebglFilterBackend({ tileSize: fabric.textureSize }));
   }
   else if (fabric.Canvas2dFilterBackend) {

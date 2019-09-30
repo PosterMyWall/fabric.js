@@ -112,6 +112,17 @@
         e: e, self: self
       });
     },
+    /**
+     * Method that defines actions when an Event.js dbtap event is detected.
+     *
+     * @param {Event} e Event object by Event.js
+     * @param {Event} self Event proxy object by Event.js
+     */
+    __onDoubleTap: function(e, self) {
+      this.fire('touch:dbltap', {
+        e: e, self: self
+      });
+    },
 
     /**
      * Scales an object by a factor

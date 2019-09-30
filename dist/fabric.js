@@ -192,7 +192,8 @@ fabric.forceGLPutImageData = false;
 
 fabric.initFilterBackend = function() {
   if (fabric.enableGLFiltering && fabric.isWebglSupported && fabric.isWebglSupported(fabric.textureSize)) {
-    console.log('max texture size: ' + fabric.maxTextureSize);
+    //*PMW* Don't out the console log
+    // console.log('max texture size: ' + fabric.maxTextureSize);
     return (new fabric.WebglFilterBackend({ tileSize: fabric.textureSize }));
   }
   else if (fabric.Canvas2dFilterBackend) {
@@ -13376,6 +13377,7 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
         eventjs[eventjsFunctor](canvasElement, 'orientation', this._onOrientationChange);
         eventjs[eventjsFunctor](canvasElement, 'shake', this._onShake);
         eventjs[eventjsFunctor](canvasElement, 'longpress', this._onLongPress);
+        eventjs[eventjsFunctor](canvasElement, 'dbltap', this._onDoubleTap);
       }
     },
 
@@ -13410,6 +13412,7 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
       this._onDrag = this._onDrag.bind(this);
       this._onShake = this._onShake.bind(this);
       this._onLongPress = this._onLongPress.bind(this);
+      this._onDoubleTap = this._onDoubleTap.bind(this);
       this._onOrientationChange = this._onOrientationChange.bind(this);
       this._onMouseWheel = this._onMouseWheel.bind(this);
       this._onMouseOut = this._onMouseOut.bind(this);
@@ -13532,6 +13535,15 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
         e.preventDefault();
       }
       return false;
+    },
+
+    /**
+     * @private
+     * @param {Event} [e] Event object fired on Event.js shake
+     * @param {Event} [self] Inner Event object
+     */
+    _onDoubleTap: function (e, self) {
+      this.__onDoubleTap && this.__onDoubleTap(e, self);
     },
 
     /**
@@ -15043,6 +15055,17 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
         e: e, self: self
       });
     },
+    /**
+     * Method that defines actions when an Event.js dbtap event is detected.
+     *
+     * @param {Event} e Event object by Event.js
+     * @param {Event} self Event proxy object by Event.js
+     */
+    __onDoubleTap: function(e, self) {
+      this.fire('touch:dbltap', {
+        e: e, self: self
+      });
+    },
 
     /**
      * Scales an object by a factor
@@ -16185,7 +16208,6 @@ fabric.util.object.extend(fabric.StaticCanvas.prototype, /** @lends fabric.Stati
      * @return {Boolean}
      */
     isNotVisible: function() {
-      //CodeReviewHamza: See if this will cause issues with shapes having opacity 0 but still borders visible
       return this.opacity === 0 ||
         (this.width === 0 && this.height === 0 && this.strokeWidth === 0) ||
         !this.visible;
