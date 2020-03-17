@@ -13412,6 +13412,7 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
       this._onDrag = this._onDrag.bind(this);
       this._onShake = this._onShake.bind(this);
       this._onLongPress = this._onLongPress.bind(this);
+      //*PMW* Added support for doubletap
       this._onDoubleTap = this._onDoubleTap.bind(this);
       this._onOrientationChange = this._onOrientationChange.bind(this);
       this._onMouseWheel = this._onMouseWheel.bind(this);
@@ -21809,14 +21810,13 @@ fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prot
     cacheProperties: [],
 
     /**
-     * *PMW* default value changed to true
      * setOnGroup is a method used for TextBox that is no more used since 2.0.0 The behavior is still
      * available setting this boolean to true.
      * @type Boolean
      * @since 2.0.0
      * @default
      */
-    useSetOnGroup: true,
+    useSetOnGroup: false,
 
     /**
      * *PMW property added*
@@ -32280,25 +32280,6 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
         }
       }
       return true;
-    },
-    /**
-     * *PMW* new function
-     * When part of a group, we don't want the Textbox's scale to increase if
-     * the group's increases. That's why we reduce the scale of the Textbox by
-     * the amount that the group's increases. This is to maintain the effective
-     * scale of the Textbox at 1, so that font-size values make sense. Otherwise
-     * the same font-size value would result in different actual size depending
-     * on the value of the scale.
-     * @param {String} key
-     * @param {Any} value
-     */
-    setOnGroup: function (key, value) {
-      if (key === 'scaleX') {
-        this.set('scaleX', Math.abs(1 / value));
-      }
-      if (key == 'scaleY') {
-        this.set('scaleY', Math.abs(1 / value));
-      }
     },
     /**
      * @param {Number} lineIndex

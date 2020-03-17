@@ -49,14 +49,13 @@
     cacheProperties: [],
 
     /**
-     * *PMW* default value changed to true
      * setOnGroup is a method used for TextBox that is no more used since 2.0.0 The behavior is still
      * available setting this boolean to true.
      * @type Boolean
      * @since 2.0.0
      * @default
      */
-    useSetOnGroup: true,
+    useSetOnGroup: false,
 
     /**
      * *PMW property added*
