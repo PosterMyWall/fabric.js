@@ -29860,10 +29860,10 @@ fabric.Image.filters.BaseFilter.fromObject = function(object, callback) {
       ctx.fillStyle = this.backgroundColor;
 
       ctx.fillRect(
-        -dim.x / 2 - this.padding,
-        -dim.y / 2 - this.padding,
-        dim.x + this.padding * 2,
-        dim.y + this.padding * 2
+        (-dim.x / 2) - this.padding / this.scaleX,
+        (-dim.y / 2) - this.padding / this.scaleY,
+        dim.x + ((this.padding / this.scaleX) * 2),
+        dim.y + ((this.padding / this.scaleY) * 2)
       );
       // if there is background color no other shadows
       // should be casted
