@@ -2033,8 +2033,8 @@
      */
     getCornerPoints: function (center) {
       var angle = this.angle,
-        width = (this.width + this.strokeWidth)  * this.scaleX,
-        height = (this.height + this.strokeWidth) * this.scaleY,
+        width = this.getScaledWidth(),
+        height = this.getScaledHeight(),
 
         tl, tr, bl, br,
         // coordinates of the center point
