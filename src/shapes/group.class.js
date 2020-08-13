@@ -59,6 +59,13 @@
 
     /**
      * *PMW property added*
+     * To delete some properties or not
+     * @type boolean
+     */
+    delegateProperties: true,
+
+    /**
+     * *PMW property added*
      * Whether to render a rectangle background or a tilted background
      * @type Boolean
      */
@@ -250,8 +257,8 @@
           this._objects[i].setOnGroup(key, value);
         }
       }
-      //*PMW* apply certain propertities of group on its objects too
-      if (this.delegatedProperties[key] || key === 'canvas') {
+      //*PMW* apply certain properties of group on its objects too
+      if ((this.delegateProperties && this.delegatedProperties[key]) || key === 'canvas') {
         i = this._objects.length;
         while (i--) {
           // PMW: by using set() insetead of _set(), calcTextWidth and calcTextHeight returns accurate

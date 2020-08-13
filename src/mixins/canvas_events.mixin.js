@@ -8,7 +8,9 @@
         mb: 4, // s
         bl: 5, // sw
         ml: 6, // w
-        tl: 7 // nw
+        tl: 7, // nw
+        pmwBtnMr: 2,
+        pmwBtnMl: 6
       },
       addListener = fabric.util.addListener,
       removeListener = fabric.util.removeListener,
@@ -1080,12 +1082,6 @@
       //*PMW* Handling cursor look on our buttons
       else if (corner === 'btn') {
         return 'pointer';
-      }
-      else if (corner === 'pmwBtnMr') {
-        return 'e-resize';
-      }
-      else if (corner === 'pmwBtnMl') {
-        return 'w-resize';
       }
       else {
         return this.defaultCursor;

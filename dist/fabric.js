@@ -13297,7 +13297,9 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
         mb: 4, // s
         bl: 5, // sw
         ml: 6, // w
-        tl: 7 // nw
+        tl: 7, // nw
+        pmwBtnMr: 2,
+        pmwBtnMl: 6
       },
       addListener = fabric.util.addListener,
       removeListener = fabric.util.removeListener,
@@ -14369,12 +14371,6 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
       //*PMW* Handling cursor look on our buttons
       else if (corner === 'btn') {
         return 'pointer';
-      }
-      else if (corner === 'pmwBtnMr') {
-        return 'e-resize';
-      }
-      else if (corner === 'pmwBtnMl') {
-        return 'w-resize';
       }
       else {
         return this.defaultCursor;
@@ -21820,6 +21816,13 @@ fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prot
 
     /**
      * *PMW property added*
+     * To delete some properties or not
+     * @type boolean
+     */
+    delegateProperties: true,
+
+    /**
+     * *PMW property added*
      * Whether to render a rectangle background or a tilted background
      * @type Boolean
      */
@@ -22011,8 +22014,8 @@ fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prot
           this._objects[i].setOnGroup(key, value);
         }
       }
-      //*PMW* apply certain propertities of group on its objects too
-      if (this.delegatedProperties[key] || key === 'canvas') {
+      //*PMW* apply certain properties of group on its objects too
+      if ((this.delegateProperties && this.delegatedProperties[key]) || key === 'canvas') {
         i = this._objects.length;
         while (i--) {
           // PMW: by using set() insetead of _set(), calcTextWidth and calcTextHeight returns accurate
@@ -22728,6 +22731,11 @@ fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prot
     strokeWidth: 0,
 
     /**
+     * Whether the image has a separate alpha data attached below the orignial image
+     */
+    hasAlphaData: false,
+
+    /**
      * When calling {@link fabric.Image.getSrc}, return value from element src with `element.getAttribute('src')`.
      * This allows for relative urls as image src.
      * @since 2.7.0
@@ -23216,6 +23224,38 @@ fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prot
       //*PMW* if vidoe apply filter on each frame draw
       if (this._element.nodeName === 'VIDEO') {
         elementToDraw = this._applyVideoFilter(this._element);
+
+        if (this.hasAlphaData) {
+          var width = w,
+            visibleHeight = h,
+            totalHeight = visibleHeight * 2;
+
+          var bufferCanvas = fabric.util.createCanvasElement(),
+            outputCanvas = fabric.util.createCanvasElement(),
+            output = outputCanvas.getContext('2d'),
+            buffer = bufferCanvas.getContext('2d');
+
+          bufferCanvas.width = width;
+          bufferCanvas.height = totalHeight;
+          outputCanvas.width = width;
+          outputCanvas.height = visibleHeight;
+
+          buffer.drawImage(elementToDraw, 0, 0);
+
+          // // this can be done without alphaData, except in Firefox which doesn't like it when image is bigger than the canvas
+          var image = buffer.getImageData(0, 0, width, visibleHeight),
+            imageData = image.data,
+            alphaData = buffer.getImageData(0, visibleHeight, width, visibleHeight).data;
+
+
+          for (var i = 3, len = imageData.length; i < len; i = i + 4) {
+            imageData[i] = alphaData[i - 1];
+          }
+
+          output.putImageData(image, 0, 0);
+          elementToDraw = outputCanvas;
+
+        }
       }
 
       elementToDraw && ctx.drawImage(elementToDraw, sX, sY, sW, sH, x, y, w, h);
@@ -29856,14 +29896,21 @@ fabric.Image.filters.BaseFilter.fromObject = function(object, callback) {
       if (!this.backgroundColor) {
         return;
       }
-      var dim = this._getNonTransformedDimensions();
+      var dim = this._getNonTransformedDimensions(),
+        scaleX = this.scaleX,
+        scaleY = this.scaleY;
+
       ctx.fillStyle = this.backgroundColor;
+      if (this.group) {
+        scaleX *= this.group.scaleX;
+        scaleY *= this.group.scaleY;
+      }
 
       ctx.fillRect(
-        (-dim.x / 2) - this.padding / this.scaleX,
-        (-dim.y / 2) - this.padding / this.scaleY,
-        dim.x + ((this.padding / this.scaleX) * 2),
-        dim.y + ((this.padding / this.scaleY) * 2)
+        (-dim.x / 2) - this.padding / scaleX,
+        (-dim.y / 2) - this.padding / scaleY,
+        dim.x + ((this.padding / scaleX) * 2),
+        dim.y + ((this.padding / scaleY) * 2)
       );
       // if there is background color no other shadows
       // should be casted

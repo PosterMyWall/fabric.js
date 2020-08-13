@@ -368,14 +368,21 @@
       if (!this.backgroundColor) {
         return;
       }
-      var dim = this._getNonTransformedDimensions();
+      var dim = this._getNonTransformedDimensions(),
+        scaleX = this.scaleX,
+        scaleY = this.scaleY;
+
       ctx.fillStyle = this.backgroundColor;
+      if (this.group) {
+        scaleX *= this.group.scaleX;
+        scaleY *= this.group.scaleY;
+      }
 
       ctx.fillRect(
-        (-dim.x / 2) - this.padding / this.scaleX,
-        (-dim.y / 2) - this.padding / this.scaleY,
-        dim.x + ((this.padding / this.scaleX) * 2),
-        dim.y + ((this.padding / this.scaleY) * 2)
+        (-dim.x / 2) - this.padding / scaleX,
+        (-dim.y / 2) - this.padding / scaleY,
+        dim.x + ((this.padding / scaleX) * 2),
+        dim.y + ((this.padding / scaleY) * 2)
       );
       // if there is background color no other shadows
       // should be casted
