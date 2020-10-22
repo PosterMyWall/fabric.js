@@ -1,4 +1,5 @@
 (function() {
+  var getFixture;
   if (fabric.isLikelyNode) {
     if (process.env.launcher === 'Firefox') {
       fabric.browserShadowBlurConstant = 0.9;
@@ -12,6 +13,7 @@
     if (process.env.launcher === 'Edge') {
       fabric.browserShadowBlurConstant = 1.75;
     }
+    getFixture = global.getFixture;
   }
   else {
     if (navigator.userAgent.indexOf('Firefox') !== -1) {
@@ -23,6 +25,7 @@
     if (navigator.userAgent.indexOf('Edge') !== -1) {
       fabric.browserShadowBlurConstant = 1.75;
     }
+    getFixture = window.getFixture;
   }
   fabric.enableGLFiltering = false;
   fabric.isWebglSupported = false;
@@ -67,9 +70,9 @@
     obj.set({
       width: 10, height: 10, scaleX: 12, scaleY: 3, top: 10, left: 5, fill: '#f55',
     });
-    obj.setShadow({
+    obj.set('shadow', new fabric.Shadow({
       color: 'rgba(0,100,0,0.9)', blur: 5, offsetX: 8, offsetY: 8, nonScaling: true
-    });
+    }));
     canvas.add(obj);
     canvas.renderAll();
     callback(canvas.lowerCanvasEl);
@@ -240,6 +243,122 @@
     percentage: 0.09,
     width: 300,
     height: 300,
+  });
+
+  function objectsInActiveSelections(canvas, callback) {
+    canvas.setZoom(0.1);
+    var rect1 = new fabric.Rect({ fill: 'purple', top: 30, left: 50, width: 30, height: 100, angle: 10 });
+    var rect2 = new fabric.Rect({ fill: 'green', top: 150, left: 10, width: 300, height: 30, angle: -10 });
+    new fabric.ActiveSelection([rect1, rect2]);
+    var output = rect1.toCanvasElement();
+    callback(output);
+  }
+
+  tests.push({
+    test: 'objects in activeSelection toCanvasElement',
+    code: objectsInActiveSelections,
+    golden: 'objectsInActiveSelections.png',
+    percentage: 0.09,
+    width: 300,
+    height: 300,
+  });
+
+  function canvasPattern(fabricCanvas, callback) {
+    getFixture('diet.jpeg', false, function(img) {
+      var pattern = new fabric.Pattern({
+        source: img,
+        repeat: 'repeat',
+        offsetX: -120,
+        offsetY: 50
+      });
+      fabricCanvas.backgroundColor = pattern;
+      var canvas = fabricCanvas.toCanvasElement();
+      callback(canvas);
+    });
+  }
+
+  tests.push({
+    test: 'canvas with background pattern and export',
+    code: canvasPattern,
+    // use the same golden on purpose
+    golden: 'canvasPattern.png',
+    percentage: 0.09,
+    width: 500,
+    height: 500,
+  });
+
+  function canvasPatternMultiplier(fabricCanvas, callback) {
+    getFixture('diet.jpeg', false, function(img2) {
+      var pattern = new fabric.Pattern({
+        source: img2,
+        repeat: 'repeat',
+        offsetX: -120,
+        offsetY: 50
+      });
+      fabricCanvas.backgroundColor = pattern;
+      var canvas = fabricCanvas.toCanvasElement(0.3);
+      callback(canvas);
+    });
+  }
+
+  tests.push({
+    test: 'canvas with background pattern and multiplier',
+    code: canvasPatternMultiplier,
+    // use the same golden on purpose
+    golden: 'canvasPatternMultiplier.png',
+    percentage: 0.09,
+    width: 500,
+    height: 500,
+  });
+
+  function imageSmoothing(fabricCanvas, callback) {
+    getFixture('greyfloral.png', false, function(img2) {
+      var fImg = new fabric.Image(img2, { imageSmoothing: false, scaleX: 10, scaleY: 10 });
+      var fImg2 = new fabric.Image(img2, { left: 400, scaleX: 10, scaleY: 10 });
+      fabricCanvas.add(fImg);
+      fabricCanvas.add(fImg2);
+      fabricCanvas.renderAll();
+      callback(fabricCanvas.lowerCanvasEl);
+    });
+  }
+
+  tests.push({
+    test: 'fabric.Image with imageSmoothing false',
+    code: imageSmoothing,
+    // use the same golden on purpose
+    golden: 'imageSoothingOnObject.png',
+    percentage: 0.09,
+    width: 800,
+    height: 400,
+  });
+
+  function pathWithGradient(canvas, callback) {
+    var pathWithGradient = new fabric.Path('M 0 0 L 0 100 L 100 100 L 100 0 Z', {
+      fill: new fabric.Gradient({
+        gradientUnits: 'percentage',
+        coords: { x1: 0, y1: 0, x2: 0, y2: 1 },
+        colorStops: [
+          { offset: 0, color: 'red' },
+          { offset: 1, color: 'black' }
+        ]
+      }),
+      height: 100,
+      width: 100,
+      top: 0,
+      left: 0
+    });
+    canvas.add(pathWithGradient);
+    canvas.renderAll();
+    callback(canvas.lowerCanvasEl);
+  }
+
+  tests.push({
+    test: 'gradient should be applied to path',
+    code: pathWithGradient,
+    golden: 'pathWithGradient.png',
+    percentage: 0.06,
+    width: 100,
+    height: 100,
   });
 
   tests.forEach(visualTestLoop(QUnit));

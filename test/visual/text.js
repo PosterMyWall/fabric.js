@@ -212,5 +212,66 @@
     percentage: 0.06,
   });
 
+  function text7(canvas, callback) {
+    var gradient = new fabric.Gradient({
+      coords: {
+        x1: 0,
+        y1: 0,
+        x2: 1,
+        y2: 0
+      },
+      gradientUnits: 'percentage',
+      colorStops: [{
+        offset: 0,
+        color: 'red',
+      }, {
+        offset: 1,
+        color: 'blue'
+      }]
+    });
+    var text = new fabric.Text('PERCENTAGE GRADIENT\nPERCENTAGE GRADIENT\nPERCENTAGE GRADIENT', {
+      left: 0,
+      top: 0,
+      fontSize: 16,
+      fill: gradient,
+    });
+    canvas.add(text);
+    canvas.renderAll();
+    callback(canvas.lowerCanvasEl);
+  }
+
+  tests.push({
+    test: 'Text percentage gradient',
+    code: text7,
+    golden: 'text7.png',
+    disabled: !fabric.isLikelyNode,
+    percentage: 0.05,
+  });
+
+  function text8(canvas, callback) {
+    var text = new fabric.Text('Scaling down', {
+      left: 10,
+      top: 10,
+      fill: 'red',
+      fontSize: 300,
+      scaleX: 0.2,
+      scaleY: 0.2,
+      fontFamily: 'Ubuntu'
+    });
+    canvas.add(text);
+    canvas.renderAll();
+    callback(canvas.lowerCanvasEl);
+  }
+
+  tests.push({
+    test: 'Text with negative scaling',
+    code: text8,
+    width: 400,
+    height: 150,
+    golden: 'text8.png',
+    disabled: !fabric.isLikelyNode,
+    percentage: 0.06,
+  });
+
   tests.forEach(visualTestLoop(QUnit));
 })();
