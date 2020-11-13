@@ -74,7 +74,7 @@
      */
     _setCornerCoords: function() {
       var coords = this.oCoords;
-//CodeReviewHamza: handle if (point === 'btn')
+
       for (var control in coords) {
         var controlObject = this.controls[control];
         coords[control].corner = controlObject.calcCornerCoords(
@@ -124,17 +124,15 @@
     drawBorders: function (ctx, styleOverride) {
       styleOverride = styleOverride || {};
       var wh = this._calculateCurrentDimensions(),
-          strokeWidth = this.borderScaleFactor,
-          width = wh.x + strokeWidth,
-          height = wh.y + strokeWidth,
-          hasControls = typeof styleOverride.hasControls !== 'undefined' ?
-            styleOverride.hasControls : this.hasControls,
-          shouldStroke = false;
+        strokeWidth = this.borderScaleFactor,
+        width = wh.x + strokeWidth,
+        height = wh.y + strokeWidth,
+        hasControls = typeof styleOverride.hasControls !== 'undefined' ?
+          styleOverride.hasControls : this.hasControls,
+        shouldStroke = false;
 
       ctx.save();
       ctx.strokeStyle = styleOverride.borderColor || this.borderColor;
-      //*PMW* changing default stroke width for border from 1 to 2
-      ctx.lineWidth = 2 / this.borderScaleFactor;
       this._setLineDash(ctx, styleOverride.borderDashArray || this.borderDashArray, null);
 
       ctx.strokeRect(
@@ -146,7 +144,7 @@
 
       if (hasControls) {
         ctx.beginPath();
-        this.forEachControl(function(control, key, fabricObject) {
+        this.forEachControl(function (control, key, fabricObject) {
           // in this moment, the ctx is centered on the object.
           // width and height of the above function are the size of the bbox.
           if (control.withConnection && control.getVisibility(fabricObject, key)) {
@@ -180,20 +178,16 @@
     drawBordersInGroup: function (ctx, options, styleOverride) {
       styleOverride = styleOverride || {};
       var bbox = fabric.util.sizeAfterTransform(this.width, this.height, options),
-          strokeWidth = this.strokeWidth,
-          strokeUniform = this.strokeUniform,
-          borderScaleFactor = this.borderScaleFactor,
-          width =
-            bbox.x + strokeWidth * (strokeUniform ? this.canvas.getZoom() : options.scaleX) + borderScaleFactor,
-          height =
-            bbox.y + strokeWidth * (strokeUniform ? this.canvas.getZoom() : options.scaleY) + borderScaleFactor;
+        strokeWidth = this.strokeWidth,
+        strokeUniform = this.strokeUniform,
+        borderScaleFactor = this.borderScaleFactor,
+        width =
+          bbox.x + strokeWidth * (strokeUniform ? this.canvas.getZoom() : options.scaleX) + borderScaleFactor,
+        height =
+          bbox.y + strokeWidth * (strokeUniform ? this.canvas.getZoom() : options.scaleY) + borderScaleFactor;
       ctx.save();
       this._setLineDash(ctx, styleOverride.borderDashArray || this.borderDashArray, null);
       ctx.strokeStyle = styleOverride.borderColor || this.borderColor;
-      //*PMW* changing default stroke width for border from 1 to 2*
-     //CodeReviewHamza: See if still needed
-      ctx.lineWidth = 2;
-
       ctx.strokeRect(
         -width / 2,
         -height / 2,
@@ -214,8 +208,7 @@
      * @return {fabric.Object} thisArg
      * @chainable
      */
-    drawControls: function(ctx, styleOverride) {
-      //CodeReviewHamza: Handle drawing of custom controls
+    drawControls: function (ctx, styleOverride) {
       styleOverride = styleOverride || {};
       ctx.save();
       ctx.setTransform(this.canvas.getRetinaScaling(), 0, 0, this.canvas.getRetinaScaling(), 0, 0);
@@ -225,7 +218,7 @@
       }
       this._setLineDash(ctx, styleOverride.cornerDashArray || this.cornerDashArray, null);
       this.setCoords();
-      this.forEachControl(function(control, key, fabricObject) {
+      this.forEachControl(function (control, key, fabricObject) {
         if (control.getVisibility(fabricObject, key)) {
           control.render(ctx,
             fabricObject.oCoords[key].x,

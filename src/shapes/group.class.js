@@ -79,6 +79,22 @@
     leanBackgroundOffset: 0,
 
     /**
+     * *PMW property added*
+     * Whether the object is currently selected.
+     * This is being used in GraphicItemSlideshowMediator to handle text editing.
+     * The editing mode is entered on single click when the item is selected. So we use this flag to determine if the item is selected.
+     * @type boolean
+     */
+    selected: false,
+
+    /**
+     * *PMW property added*
+     * Whether the PMW added selected flag should be used.
+     * @type boolean
+     */
+    useSelectedFlag: false,
+
+    /**
      * Constructor
      * @param {Object} objects Group objects
      * @param {Object} [options] Options object
@@ -115,8 +131,7 @@
         this._updateObjectsCoords(center);
         delete options.centerPoint;
         this.callSuper('initialize', options);
-      }
-      else {
+      } else {
         this._updateObjectsACoords();
       }
 
@@ -126,10 +141,21 @@
     /**
      * @private
      */
-    _updateObjectsACoords: function() {
+    _updateObjectsACoords: function () {
       var skipControls = true;
-      for (var i = this._objects.length; i--; ){
+      for (var i = this._objects.length; i--;) {
         this._objects[i].setCoords(skipControls);
+      }
+    },
+
+    /**
+     * *PMW function added*
+     * Called everytime a group object is deselected. The useSelectedFlag is used and only true when the group object is slideshow item. See docs of 'selected' property.
+     */
+    onDeselect: function () {
+      if (this.useSelectedFlag) {
+
+        this.selected = false;
       }
     },
 
@@ -151,8 +177,8 @@
      */
     _updateObjectCoords: function (object, center) {
       var objectLeft = object.left,
-          objectTop = object.top,
-          skipControls = true;
+        objectTop = object.top,
+        skipControls = true;
 
       object.set({
         left: objectLeft - center.x,
@@ -297,8 +323,7 @@
       var objsToObject, sourcePath = this.sourcePath;
       if (sourcePath) {
         objsToObject = sourcePath;
-      }
-      else {
+      } else {
         var _includeDefaultValues = this.includeDefaultValues;
         objsToObject = this._objects.map(function (obj) {
           var originalDefaults = obj.includeDefaultValues;
@@ -326,8 +351,7 @@
       if (this instanceof fabric.Table) {
         this.renderTableCustomBackground(ctx);
         this.renderTableBorders(ctx);
-      }
-      else {
+      } else {
         this.renderGroupBackground(ctx);
       }
       ctx.restore();
@@ -359,8 +383,7 @@
         ctx.closePath();
         ctx.fill();
         ctx.restore();
-      }
-      else {
+      } else {
         ctx.save();
         ctx.fillStyle = this.backgroundColor;
         ctx.fillRect(
@@ -398,7 +421,7 @@
      * Check if this object or a child object will cast a shadow
      * @return {Boolean}
      */
-    willDrawShadow: function() {
+    willDrawShadow: function () {
       if (fabric.Object.prototype.willDrawShadow.call(this)) {
         return true;
       }
@@ -557,9 +580,9 @@
      * @return {fabric.Group} thisArg
      * @chainable
      */
-    setObjectsCoords: function() {
+    setObjectsCoords: function () {
       var skipControls = true;
-      this.forEachObject(function(object) {
+      this.forEachObject(function (object) {
         object.setCoords(skipControls);
       });
       return this;
@@ -658,11 +681,11 @@
      */
     _calcBounds: function (onlyWidthHeight) {
       var aX = [],
-          aY = [],
-          o, prop,
-          props = ['tr', 'br', 'bl', 'tl'],
-          i = 0, iLen = this._objects.length,
-          j, jLen = props.length;
+        aY = [],
+        o, prop,
+        props = ['tr', 'br', 'bl', 'tl'],
+        i = 0, iLen = this._objects.length,
+        j, jLen = props.length;
 
       for (; i < iLen; ++i) {
         o = this._objects[i];
@@ -750,9 +773,9 @@
    * @param {Object} object Object to create a group from
    * @param {Function} [callback] Callback to invoke when an group instance is created
    */
-  fabric.Group.fromObject = function(object, callback) {
+  fabric.Group.fromObject = function (object, callback) {
     var objects = object.objects,
-        options = fabric.util.object.clone(object, true);
+      options = fabric.util.object.clone(object, true);
     delete options.objects;
     if (typeof objects === 'string') {
       // it has to be an url or something went wrong.
@@ -763,8 +786,8 @@
       });
       return;
     }
-    fabric.util.enlivenObjects(objects, function(enlivenedObjects) {
-      fabric.util.enlivenObjects([object.clipPath], function(enlivedClipPath) {
+    fabric.util.enlivenObjects(objects, function (enlivenedObjects) {
+      fabric.util.enlivenObjects([object.clipPath], function (enlivedClipPath) {
         var options = fabric.util.object.clone(object, true);
         options.clipPath = enlivedClipPath[0];
         delete options.objects;

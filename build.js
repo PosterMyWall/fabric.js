@@ -233,7 +233,6 @@ var filesToInclude = [
 
   ifSpecifiedInclude('textbox', 'src/shapes/textbox.class.js'),
   ifSpecifiedInclude('interaction', 'src/mixins/default_controls.js'),
-  ifSpecifiedInclude('textbox', 'src/mixins/textbox_behavior.mixin.js'),
 
   ifSpecifiedInclude('tabs', 'src/shapes/tabs.class.js'),
   ifSpecifiedInclude('table', 'src/shapes/table.class.js'),

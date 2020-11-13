@@ -75,11 +75,6 @@
          * @type {boolean}
          */
         hasButton: true,
-        /**
-         * Text to use for edit button
-         * @type {String}
-         */
-        buttonText: 'edit content',
 
         /**
          * Draws the table/schedule border

@@ -163,12 +163,11 @@
     skewY:                    0,
 
     /**
-     * *PMW* changed default value to meet our standards
      * Size of object's controlling corners (in pixels)
      * @type Number
      * @default
      */
-    cornerSize:               22,
+    cornerSize:               13,
 
     /**
      * Size of object's controlling corners when touch interaction is detected
@@ -178,12 +177,11 @@
     touchCornerSize:               24,
 
     /**
-     * *PMW* changed default value to meet our standards
      * When true, object's controlling corners are rendered as transparent inside (i.e. stroke instead of fill)
      * @type Boolean
      * @default
      */
-    transparentCorners:       false,
+    transparentCorners:       true,
 
     /**
      * Default cursor value used when hovering over this object on canvas
@@ -200,15 +198,13 @@
     moveCursor:               null,
 
     /**
-     * *PMW* changed default value to meet our standards
      * Padding between object and its controlling borders (in pixels)
      * @type Number
      * @default
      */
-    padding:                  11,
+    padding:                  0,
 
     /**
-     * *PMW* changed default value to meet our standards
      * Color of controlling borders of an object (when it's active)
      * @type String
      * @default
@@ -223,20 +219,11 @@
     borderDashArray:          null,
 
     /**
-     * *PMW* changed default value to meet our standards
      * Color of controlling corners of an object (when it's active)
      * @type String
      * @default
      */
-    cornerColor:              'rgba(255,255,255,1)',
-
-    /**
-     * *PMW* new property
-     * PosterMyWall property for the width of the button.
-     * @type Number
-     * @default
-     */
-    buttonWidth: 92,
+    cornerColor:              'rgb(178,204,255)',
 
     /**
      * *PMW* new property
@@ -244,16 +231,23 @@
      * @type String
      * @default
      */
-    buttonText: '',
+    pmwBmBtnText: '',
 
     /**
-     * *PMW* changed default value to meet our standards
+     * *PMW* new property
+     * An svg of the icon place in the pmw bottom-middle button
+     * @type String
+     * @default
+     */
+    pmwBmBtnIcon: '',
+
+    /**
      * Color of controlling corners of an object (when it's active and transparentCorners false)
      * @since 1.6.2
      * @type String
      * @default
      */
-    cornerStrokeColor:        'rgba(63,188,231,1)',
+    cornerStrokeColor:        null,
 
     /**
      * Specify style of control, 'rect' or 'circle'
@@ -386,12 +380,11 @@
     shadow:                   null,
 
     /**
-     * *PMW* changed default value to meet our standards
      * Opacity of object's controlling borders when object is active and moving
      * @type Number
      * @default
      */
-    borderOpacityWhenMoving:  1,
+    borderOpacityWhenMoving:  0.4,
 
     /**
      * Scale factor of object's controlling borders
@@ -510,12 +503,11 @@
     lockSkewingY:             false,
 
     /**
-     * *PMW* changed default value to meet our standards
      * When `true`, object cannot be flipped by scaling into negative values
      * @type Boolean
      * @default
      */
-    lockScalingFlip:          true,
+    lockScalingFlip:          false,
 
     /**
      * When `true`, object is not exported in OBJECT/JSON
