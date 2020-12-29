@@ -14955,6 +14955,8 @@ fabric.PatternBrush = fabric.util.createClass(fabric.PencilBrush, /** @lends fab
       if (this.stopContextMenu) {
         e.stopPropagation();
         e.preventDefault();
+        //*PMW* added event to adhere to our custom right click pop-up menu
+        this.fire('contextMenuStopped', {e: e, target: this.findTarget(e)});
       }
       return false;
     },
