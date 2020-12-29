@@ -3396,7 +3396,8 @@ fabric.CommonMethods = {
       // Split image data - for tolerance > 1, pixelDataSize = 4;
       for (i = 3; i < l; i += 4) {
         temp = imageData.data[i];
-        _isTransparent = temp <= 0;
+        //*PMW* changing transparent pixel threshold value
+        _isTransparent = temp <= 2;
         if (_isTransparent === false) {
           break; // Stop if colour found
         }
