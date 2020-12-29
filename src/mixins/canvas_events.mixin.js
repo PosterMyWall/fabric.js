@@ -470,7 +470,8 @@
         var control = target.controls[corner],
           mouseUpHandler = control && control.getMouseUpHandler(e, target, control);
         if (mouseUpHandler) {
-          mouseUpHandler(e, target, control);
+          var pointer = this.getPointer(e);
+          mouseUpHandler(e, transform, pointer.x, pointer.y);
         }
         target.isMoving = false;
       }
@@ -733,12 +734,13 @@
         );
         target.__corner = corner;
         if (target === this._activeObject && (corner || !shouldGroup)) {
-          var control = target.controls[corner],
-            mouseDownHandler = control && control.getMouseDownHandler(e, target, control);
-          if (mouseDownHandler) {
-            mouseDownHandler(e, target, control);
-          }
           this._setupCurrentTransform(e, target, alreadySelected);
+          var control = target.controls[corner],
+              pointer = this.getPointer(e),
+              mouseDownHandler = control && control.getMouseDownHandler(e, target, control);
+          if (mouseDownHandler) {
+            mouseDownHandler(e, this._currentTransform, pointer.x, pointer.y);
+          }
         }
       }
       this._handleEvent(e, 'down');
