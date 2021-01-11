@@ -855,7 +855,7 @@
             strokeLineCap:            this.strokeLineCap,
             strokeDashOffset:         this.strokeDashOffset,
             strokeLineJoin:           this.strokeLineJoin,
-            // strokeUniform:            this.strokeUniform,
+            strokeUniform:            this.strokeUniform,
             strokeMiterLimit:         toFixed(this.strokeMiterLimit, NUM_FRACTION_DIGITS),
             scaleX:                   toFixed(this.scaleX, NUM_FRACTION_DIGITS),
             scaleY:                   toFixed(this.scaleY, NUM_FRACTION_DIGITS),
@@ -1007,7 +1007,6 @@
           this.group.set('dirty', true);
         }
       }
-
       return this;
     },
 
