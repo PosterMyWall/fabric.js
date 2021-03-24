@@ -465,15 +465,21 @@
         }
       }
       if (target) {
-        var corner = target._findTargetCorner(
-          this.getPointer(e, true),
-          fabric.util.isTouchEvent(e)
-        );
-        var control = target.controls[corner],
-          mouseUpHandler = control && control.getMouseUpHandler(e, target, control);
-        if (mouseUpHandler) {
-          var pointer = this.getPointer(e);
-          mouseUpHandler(e, transform, pointer.x, pointer.y);
+        if (target.selectable && target !== this._activeObject && target.activeOn === 'up') {
+          this.setActiveObject(target, e);
+          shouldRender = true;
+        }
+        else {
+          var corner = target._findTargetCorner(
+            this.getPointer(e, true),
+            fabric.util.isTouchEvent(e)
+          );
+          var control = target.controls[corner],
+              mouseUpHandler = control && control.getMouseUpHandler(e, target, control);
+          if (mouseUpHandler) {
+            var pointer = this.getPointer(e);
+            mouseUpHandler(e, transform, pointer.x, pointer.y);
+          }
         }
         target.isMoving = false;
       }
@@ -727,7 +733,7 @@
 
       if (target) {
         var alreadySelected = target === this._activeObject;
-        if (target.selectable) {
+        if (target.selectable && target.activeOn === 'down') {
           this.setActiveObject(target, e);
         }
         var corner = target._findTargetCorner(
@@ -934,7 +940,6 @@
         transform = this._currentTransform;
 
       transform.reset = false;
-      transform.target.isMoving = true;
       transform.shiftKey = e.shiftKey;
       transform.altKey = e[this.centeredKey];
 
@@ -958,6 +963,7 @@
         actionPerformed = actionHandler(e, transform, x, y);
       }
       if (action === 'drag' && actionPerformed) {
+        transform.target.isMoving = true;
         this.setCursor(transform.target.moveCursor || this.moveCursor);
       }
       transform.actionPerformed = transform.actionPerformed || actionPerformed;
