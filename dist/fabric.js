@@ -23308,11 +23308,6 @@ fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prot
     strokeWidth: 0,
 
     /**
-     * Whether the image has a separate alpha data attached below the orignial image
-     */
-    hasAlphaData: false,
-
-    /**
      * When calling {@link fabric.Image.getSrc}, return value from element src with `element.getAttribute('src')`.
      * This allows for relative urls as image src.
      * @since 2.7.0
@@ -23850,39 +23845,6 @@ fabric.util.object.extend(fabric.Object.prototype, /** @lends fabric.Object.prot
       //*PMW* if vidoe apply filter on each frame draw
       if (this._element.nodeName === 'VIDEO') {
         elementToDraw = this._applyVideoFilter(this._element);
-
-        if (this.hasAlphaData) {
-          //CodeReviewHamza: See if this needs change
-          var width = w,
-            visibleHeight = h,
-            totalHeight = visibleHeight * 2;
-
-          var bufferCanvas = fabric.util.createCanvasElement(),
-            outputCanvas = fabric.util.createCanvasElement(),
-            output = outputCanvas.getContext('2d'),
-            buffer = bufferCanvas.getContext('2d');
-
-          bufferCanvas.width = width;
-          bufferCanvas.height = totalHeight;
-          outputCanvas.width = width;
-          outputCanvas.height = visibleHeight;
-
-          buffer.drawImage(elementToDraw, 0, 0);
-
-          // // this can be done without alphaData, except in Firefox which doesn't like it when image is bigger than the canvas
-          var image = buffer.getImageData(0, 0, width, visibleHeight),
-            imageData = image.data,
-            alphaData = buffer.getImageData(0, visibleHeight, width, visibleHeight).data;
-
-
-          for (var i = 3, len = imageData.length; i < len; i = i + 4) {
-            imageData[i] = alphaData[i - 1];
-          }
-
-          output.putImageData(image, 0, 0);
-          elementToDraw = outputCanvas;
-
-        }
       }
 
 
